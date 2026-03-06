@@ -4,7 +4,7 @@ services:
     name: openclaw-predictor-agent
     runtime: node
     plan: starter
-    buildCommand: cd agent && npm install && npx prisma generate
+    buildCommand: cd agent && rm -rf node_modules && npm install && npx prisma generate && npm run build
     startCommand: cd agent && npm start
     envVars:
       - key: PRIVATE_KEY
@@ -32,6 +32,21 @@ services:
         value: predict-runbooks
       - key: GREENFIELD_EVIDENCE_BUCKET
         value: predict-evidence
+
+  # Next.js Frontend
+  - type: web
+    name: openclaw-predictor-frontend
+    runtime: node
+    plan: starter
+    buildCommand: cd frontend && npm install && npm run build
+    startCommand: cd frontend && npm start
+    envVars:
+      - key: NEXT_PUBLIC_REGISTRY_ADDRESS
+        sync: false
+      - key: NEXT_PUBLIC_BSC_RPC
+        value: https://data-seed-prebsc-1-s1.binance.org:8545/
+      - key: NEXT_PUBLIC_BSCSCAN_URL
+        value: https://testnet.bscscan.com
 
 databases:
   - name: openclaw-db
