@@ -48,13 +48,13 @@ cat > /root/.openclaw/mcp.json << EOF
 }
 EOF
 
-# Write Anthropic API key
+# Write OpenAI API key
 mkdir -p /root/.openclaw/agents/main/agent
 cat > /root/.openclaw/agents/main/agent/auth-profiles.json << EOF
 {
   "default": {
-    "anthropic": {
-      "apiKey": "${ANTHROPIC_API_KEY}"
+    "openai": {
+      "apiKey": "${OPENAI_API_KEY}"
     }
   }
 }
@@ -67,7 +67,7 @@ cat /root/.openclaw/openclaw.json
 echo "=== auth-profiles.json ==="
 cat /root/.openclaw/agents/main/agent/auth-profiles.json
 
-echo "API KEY SET: ${ANTHROPIC_API_KEY:0:10}..."
+echo "API KEY SET: ${OPENAI_API_KEY:0:10}..."
 
 # Copy config for node user as well, just in case
 cp /root/.openclaw/openclaw.json /home/node/.openclaw/openclaw.json || true
