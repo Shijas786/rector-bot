@@ -2,8 +2,8 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# Install git required by MCP node modules
-RUN apk add --no-cache git
+# Install git and C++ build tools required by native node modules like node-llama-cpp
+RUN apk add --no-cache git python3 make g++ build-base
 
 # Create a package.json and install openclaw locally
 RUN npm init -y
