@@ -18,5 +18,5 @@ EXPOSE 18789
 # Switch path so openclaw.json is naturally detected
 WORKDIR /app/rector
 
-# Start the openclaw gateway using the local rector/ config folder
-CMD ["npx", "openclaw", "gateway", "--port", "18789", "--allow-unconfigured"]
+# Execute the shell script that boots both the gateway and telegram worker
+CMD ["./start.sh"]
