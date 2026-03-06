@@ -19,4 +19,4 @@ EXPOSE 18789
 WORKDIR /app/rector
 
 # Start the openclaw gateway using the local rector/ config folder
-CMD ["npx", "openclaw", "gateway", "--port", "18789"]
+CMD ["npx", "openclaw", "gateway", "--port", "18789", "--allow-unconfigured"]
