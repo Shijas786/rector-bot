@@ -17,7 +17,7 @@ const connection = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
 
 const QUEUE_NAME = "prediction-resolution";
 
-export const resolutionQueue = new Queue(QUEUE_NAME, { connection });
+export const resolutionQueue = new Queue(QUEUE_NAME, { connection: connection as any });
 
 /**
  * Schedule a prediction for auto-resolution.
@@ -143,7 +143,7 @@ export function startWorker(
                 throw error;
             }
         },
-        { connection, concurrency: 5 }
+        { connection: connection as any, concurrency: 5 }
     );
 
     worker.on("completed", (job) => {
