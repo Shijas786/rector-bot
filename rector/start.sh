@@ -14,11 +14,11 @@ rm -f /home/node/.openclaw/openclaw.json
 # Write openclaw config from env vars
 cat > /root/.openclaw/openclaw.json << EOF
 {
+  "agent": {
+    "model": { "primary": "openai/gpt-4o" }
+  },
   "gateway": {
     "mode": "local",
-    "models": {
-      "fallbacks": ["openai/gpt-4o", "openai/gpt-4o-mini"]
-    },
     "auth": {
       "token": "${OPENCLAW_GATEWAY_TOKEN}"
     }
