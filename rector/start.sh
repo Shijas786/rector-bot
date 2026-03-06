@@ -10,7 +10,7 @@ rm -f /root/.openclaw/openclaw.json
 rm -f /home/node/.openclaw/openclaw.json
 
 # Write openclaw config from env vars
-cat > /root/.openclaw/openclaw.json << 'EOF'
+cat > /root/.openclaw/openclaw.json << EOF
 {
   "gateway": {
     "mode": "local",
