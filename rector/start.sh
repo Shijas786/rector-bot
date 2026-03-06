@@ -1,5 +1,7 @@
 #!/bin/sh
 set -e
+# Wait for volume to finish mounting to avoid overwriting dynamically generated configs later
+sleep 2
 
 # Ensure config dir exists
 mkdir -p /root/.openclaw
@@ -64,6 +66,8 @@ cat /root/.openclaw/openclaw.json
 
 echo "=== auth-profiles.json ==="
 cat /root/.openclaw/agents/main/agent/auth-profiles.json
+
+echo "API KEY SET: ${ANTHROPIC_API_KEY:0:10}..."
 
 # Copy config for node user as well, just in case
 cp /root/.openclaw/openclaw.json /home/node/.openclaw/openclaw.json || true
