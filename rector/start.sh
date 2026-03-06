@@ -5,21 +5,32 @@ set -e
 mkdir -p /root/.openclaw
 mkdir -p /home/node/.openclaw
 
-# Write config from env vars
-cat > /root/.openclaw/openclaw.json << EOF
+# Force delete old config first
+rm -f /root/.openclaw/openclaw.json
+rm -f /home/node/.openclaw/openclaw.json
+
+# Write openclaw config from env vars
+cat > /root/.openclaw/openclaw.json << 'EOF'
 {
   "channels": {
     "telegram": {
       "botToken": "${TELEGRAM_BOT_TOKEN}",
-      "dmPolicy": "open"
+      "dmPolicy": "open",
+      "allowFrom": ["*"]
     }
   },
   "gateway": {
     "auth": {
       "token": "${OPENCLAW_GATEWAY_TOKEN}"
     }
-  },
-  "mcpServers": {
+  }
+}
+EOF
+
+# Write mcp config from env vars
+cat > /root/.openclaw/mcp.json << EOF
+{
+  "servers": {
     "bnbchain-mcp": {
       "command": "npx",
       "args": [
@@ -37,6 +48,8 @@ EOF
 # Copy config for node user as well, just in case
 cp /root/.openclaw/openclaw.json /home/node/.openclaw/openclaw.json || true
 cp /root/.openclaw/openclaw.json /app/rector/openclaw.json || true
+cp /root/.openclaw/mcp.json /home/node/.openclaw/mcp.json || true
+cp /root/.openclaw/mcp.json /app/rector/mcp.json || true
 
 # Skip onboarding
 export OPENCLAW_SKIP_ONBOARD=true
