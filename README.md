@@ -32,8 +32,7 @@ Telegram → Rector → Agent Pipeline
 ├── rector/             ← Gateway config + SOUL.md
 ├── agent/              ← TypeScript pipeline (OpenAI, MCP, BullMQ)
 ├── frontend/           ← Next.js 14 explorer (5 pages)
-├── .env.example        ← Environment variables
-└── render.yaml         ← Render deployment config
+└── .env.example        ← Environment variables
 ```
 
 ## 🚀 Quick Start
@@ -125,8 +124,8 @@ rector gateway --port 18789
 |---|---|
 | Rector + MCP + Binance API | Free |
 | OpenAI GPT-4o | ~$5/mo |
-| Render (worker + DB + Redis) | ~$7/mo |
-| **Total** | **~$12/mo** |
+| Railway (Worker + Web + DB + Redis) | ~$5/mo |
+| **Total** | **~$10/mo** |
 
 ---
 
