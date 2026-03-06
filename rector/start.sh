@@ -1,10 +1,12 @@
 #!/bin/sh
-# Start the core gateway API in the background
-npx openclaw gateway --port 18789 --allow-unconfigured &
 
-# Wait for the gateway API to boot
-sleep 5
+# Skip interactive onboarding (stateless Railway mode)
+export OPENCLAW_SKIP_ONBOARD=true
 
-# Connect the Telegram channel listener and keep the container alive
-npx openclaw telegram
-wait
+# Add telegram channel non-interactively using Railway's env token
+npx openclaw channels add \
+  --channel telegram \
+  --token $OPENCLAW_TELEGRAM_TOKEN
+
+# Start gateway and latch process
+npx openclaw gateway --port 18789

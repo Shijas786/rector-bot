@@ -13,10 +13,13 @@
     },
     "channels": {
         "telegram": {
-            "token": "${OPENCLAW_TELEGRAM_TOKEN}",
-            "allowFrom": [
-                "*"
-            ]
+            "botToken": "${TELEGRAM_BOT_TOKEN}",
+            "dmPolicy": "open"
+        }
+    },
+    "gateway": {
+        "auth": {
+            "token": "${OPENCLAW_GATEWAY_TOKEN}"
         }
     }
 }

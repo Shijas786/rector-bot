@@ -18,5 +18,8 @@ EXPOSE 18789
 # Switch path so openclaw.json is naturally detected
 WORKDIR /app/rector
 
+# Ensure the OpenClaw data directory is persisted (so gateway tokens survive container restarts)
+VOLUME ["/root/.openclaw", "/home/node/.openclaw"]
+
 # Execute the shell script that boots both the gateway and telegram worker
 CMD ["./start.sh"]
