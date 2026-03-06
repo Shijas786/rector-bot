@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String       @id @default(cuid())
+  telegramId  String       @unique
+  username    String?
+  createdAt   DateTime     @default(now())
+  predictions Prediction[]
+  alerts      Alert[]
+
+  @@map("users")
+}
+
+model Prediction {
+  id              Int      @id @default(autoincrement())
+  onchainId       Int?     @unique
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  claimText       String
+  disambiguated   String?
+  runbookRef      String?
+  resolutionDate  DateTime
+  status          PredictionStatus @default(PENDING)
+  outcome         Boolean?
+  confidence      Int?
+  evidenceRef     String?
+  reasoning       String?
+  txHashSubmit    String?
+  txHashResolve   String?
+  createdAt       DateTime @default(now())
+  resolvedAt      DateTime?
+
+  @@map("predictions")
+}
+
+model Alert {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  symbol      String
+  condition   AlertCondition
+  targetPrice Float?
+  percentage  Float?
+  triggered   Boolean   @default(false)
+  triggeredAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@map("alerts")
+}
+
+enum PredictionStatus {
+  PENDING
+  RESOLVED
+  INCONCLUSIVE
+  EXPIRED
+}
+
+enum AlertCondition {
+  PRICE_ABOVE
+  PRICE_BELOW
+  PRICE_DROP_PCT
+  PRICE_RISE_PCT
+  VOLUME_SPIKE
+}

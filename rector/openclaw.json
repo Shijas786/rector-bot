@@ -1,0 +1,22 @@
+{
+    "mcpServers": {
+        "bnbchain-mcp": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@bnb-chain/mcp@latest"
+            ],
+            "env": {
+                "PRIVATE_KEY": "your_agent_wallet_private_key"
+            }
+        }
+    },
+    "channels": {
+        "telegram": {
+            "token": "your_telegram_bot_token",
+            "allowFrom": [
+                "*"
+            ]
+        }
+    }
+}

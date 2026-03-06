@@ -1,0 +1,19 @@
+{
+  "name": "openclaw-predictor-contracts",
+  "version": "1.0.0",
+  "description": "PredictionRegistry smart contract for BSC",
+  "scripts": {
+    "compile": "hardhat compile",
+    "deploy:testnet": "hardhat run scripts/deploy.ts --network bscTestnet",
+    "register": "hardhat run scripts/register-erc8004.ts --network bscTestnet",
+    "test": "hardhat test",
+    "clean": "hardhat clean"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@openzeppelin/contracts": "^5.0.1",
+    "dotenv": "^16.4.1",
+    "hardhat": "^2.22.0",
+    "typescript": "^5.3.3"
+  }
+}
