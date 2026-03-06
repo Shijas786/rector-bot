@@ -12,16 +12,17 @@ rm -f /home/node/.openclaw/openclaw.json
 # Write openclaw config from env vars
 cat > /root/.openclaw/openclaw.json << 'EOF'
 {
+  "gateway": {
+    "mode": "local",
+    "auth": {
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
+    }
+  },
   "channels": {
     "telegram": {
       "botToken": "${TELEGRAM_BOT_TOKEN}",
       "dmPolicy": "open",
       "allowFrom": ["*"]
-    }
-  },
-  "gateway": {
-    "auth": {
-      "token": "${OPENCLAW_GATEWAY_TOKEN}"
     }
   }
 }
@@ -60,4 +61,4 @@ npx openclaw channels add \
   --token "${TELEGRAM_BOT_TOKEN}" || true
 
 # Start gateway
-exec npx openclaw gateway --port 18789
+exec npx openclaw gateway --port 18789 --allow-unconfigured

@@ -9,6 +9,7 @@ RUN apk add --no-cache git python3 make g++ build-base
 RUN npm init -y
 ENV NODE_LLAMA_CPP_SKIP_DOWNLOAD=true
 RUN npm install openclaw@latest
+RUN npx openclaw channels install telegram
 RUN npm install @bnb-chain/mcp@latest
 
 COPY rector/ /app/rector/
