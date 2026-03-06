@@ -58,6 +58,13 @@ cat > /root/.openclaw/agents/main/agent/auth-profiles.json << EOF
 }
 EOF
 
+# Confirm files exist
+echo "=== openclaw.json ==="
+cat /root/.openclaw/openclaw.json
+
+echo "=== auth-profiles.json ==="
+cat /root/.openclaw/agents/main/agent/auth-profiles.json
+
 # Copy config for node user as well, just in case
 cp /root/.openclaw/openclaw.json /home/node/.openclaw/openclaw.json || true
 cp /root/.openclaw/openclaw.json /app/rector/openclaw.json || true
