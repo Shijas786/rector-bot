@@ -5,8 +5,9 @@ WORKDIR /app
 # Install git and C++ build tools required by native node modules like node-llama-cpp
 RUN apk add --no-cache git python3 make g++ build-base
 
-# Create a package.json and install openclaw locally
+# Create a package.json and set flags to skip the unnecessary C++ Local-LLM compilation for Alpine
 RUN npm init -y
+ENV NODE_LLAMA_CPP_SKIP_DOWNLOAD=true
 RUN npm install openclaw@latest
 RUN npm install @bnb-chain/mcp@latest
 
