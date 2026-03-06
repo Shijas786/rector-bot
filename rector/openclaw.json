@@ -7,13 +7,13 @@
                 "@bnb-chain/mcp@latest"
             ],
             "env": {
-                "PRIVATE_KEY": "your_agent_wallet_private_key"
+                "PRIVATE_KEY": "${PRIVATE_KEY}"
             }
         }
     },
     "channels": {
         "telegram": {
-            "token": "your_telegram_bot_token",
+            "token": "${OPENCLAW_TELEGRAM_TOKEN}",
             "allowFrom": [
                 "*"
             ]
