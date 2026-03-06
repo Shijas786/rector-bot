@@ -46,6 +46,18 @@ cat > /root/.openclaw/mcp.json << EOF
 }
 EOF
 
+# Write Anthropic API key
+mkdir -p /root/.openclaw/agents/main/agent
+cat > /root/.openclaw/agents/main/agent/auth-profiles.json << EOF
+{
+  "default": {
+    "anthropic": {
+      "apiKey": "${ANTHROPIC_API_KEY}"
+    }
+  }
+}
+EOF
+
 # Copy config for node user as well, just in case
 cp /root/.openclaw/openclaw.json /home/node/.openclaw/openclaw.json || true
 cp /root/.openclaw/openclaw.json /app/rector/openclaw.json || true
