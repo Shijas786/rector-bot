@@ -16,6 +16,9 @@ cat > /root/.openclaw/openclaw.json << EOF
 {
   "gateway": {
     "mode": "local",
+    "models": {
+      "fallbacks": ["openai/gpt-4o", "openai/gpt-4o-mini"]
+    },
     "auth": {
       "token": "${OPENCLAW_GATEWAY_TOKEN}"
     }
