@@ -1,9 +1,9 @@
-FROM node:22-alpine
+FROM node:22-bookworm-slim
 
 WORKDIR /app
 
 # Install git, C++ build tools, and socat
-RUN apk add --no-cache git python3 make g++ build-base socat
+RUN apt-get update && apt-get install -y git python3 make g++ socat && rm -rf /var/lib/apt/lists/*
 
 # Setup root workspace
 COPY package*.json ./
