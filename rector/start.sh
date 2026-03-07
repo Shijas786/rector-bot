@@ -1,27 +1,24 @@
 #!/bin/sh
 set -e
 
-# Setup OpenClaw environment
-mkdir -p /root/.openclaw/skills/crypto-prices
+# Setup OpenClaw workspace rules
+mkdir -p /root/.openclaw/workspace
 
-# Create crypto price skill so bot fetches live Binance data
-cat > /root/.openclaw/skills/crypto-prices/SKILL.md << 'EOF'
----
-name: crypto-prices
-description: Fetch live cryptocurrency prices from Binance
----
+cat > /root/.openclaw/workspace/AGENTS.md << 'EOF'
+# Crypto Price Bot Rules
 
-When the user asks about any cryptocurrency price (BTC, BNB, ETH, or any token):
+## RULE 1 - Always fetch live prices
+When any user asks about a crypto price, you MUST call web_fetch on the Binance public API. Never say you cannot fetch prices. Never redirect to CoinMarketCap or other sites.
 
-1. ALWAYS use web_fetch to call the Binance public API FIRST before answering
-2. URL format: https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT
-   - BNB price: https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT
-   - BTC price: https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT
-   - ETH price: https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT
-3. Parse the "price" field from the JSON response
-4. Always state the live price clearly with the timestamp
+## RULE 2 - API URLs
+- BNB:  https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT
+- BTC:  https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT  
+- ETH:  https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT
+- SOL:  https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT
+- For any other token append USDT: e.g. ADAUSDT, DOTUSDT
 
-NEVER say you cannot fetch prices. ALWAYS call the Binance API first.
+## RULE 3 - Response format
+Always reply: "Live BNB price: $X.XX (source: Binance)"
 EOF
 
 # Write minimal openclaw config from env
@@ -44,16 +41,9 @@ cat > /root/.openclaw/openclaw.json << EOF
       "dmPolicy": "open",
       "allowFrom": ["*"]
     }
-  },
-  "tools": {
-    "web": {
-      "fetch": {
-        "enabled": true
-      }
-    }
   }
 }
 EOF
 
-# Start openclaw gateway (Auto-detects Telegram from config)
+# Start openclaw gateway
 npx openclaw gateway --port 18789 --allow-unconfigured

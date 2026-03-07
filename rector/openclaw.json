@@ -12,12 +12,5 @@
         "auth": {
             "token": "${OPENCLAW_GATEWAY_TOKEN}"
         }
-    },
-    "tools": {
-        "web": {
-            "fetch": {
-                "enabled": true
-            }
-        }
     }
 }
