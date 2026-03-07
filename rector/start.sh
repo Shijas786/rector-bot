@@ -10,8 +10,8 @@ cp /app/rector/SOUL.md "$WORKSPACE_DIR/SOUL.md"
 
 cat > "$WORKSPACE_DIR/AGENTS.md" << 'EOF'
 # Rector Core Logic
-When a user wants to make a prediction, use the `bash` tool to run the predict script in /app/agent.
-When a user asks for analysis of a token, use the `bash` tool to run the analyse script in /app/agent.
+When a user wants to make a prediction, use the `exec` tool to run the predict script in /app/agent.
+When a user asks for analysis of a token, use the `exec` tool to run the analyse script in /app/agent.
 Refer to the rector-predictor skill for exact commands.
 EOF
 
