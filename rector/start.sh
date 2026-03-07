@@ -20,7 +20,12 @@ mkdir -p "$WORKSPACE_DIR/skills"
 cp -r /app/rector/skills/* "$WORKSPACE_DIR/skills/"
 
 echo "Workspace initialized at $WORKSPACE_DIR"
-ls "$WORKSPACE_DIR"
+ls -la "$WORKSPACE_DIR"
+echo "--- Skills directory ---"
+find "$WORKSPACE_DIR/skills" -type f 2>/dev/null || echo "No skills found!"
+echo "--- SOUL.md content ---"
+head -5 "$WORKSPACE_DIR/SOUL.md"
+echo "--- openclaw.json ---"
 
 # Step 2: Write openclaw.json (skills handle tool routing)
 cat > "./openclaw.json" << 'EOF'
