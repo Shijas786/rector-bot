@@ -27,8 +27,9 @@ echo "--- SOUL.md content ---"
 head -5 "$WORKSPACE_DIR/SOUL.md"
 echo "--- openclaw.json ---"
 
-# Step 2: Write openclaw.json (skills handle tool routing)
-cat > "./openclaw.json" << 'EOF'
+# Step 2: Write openclaw.json to the correct location
+mkdir -p /root/.openclaw
+cat > "/root/.openclaw/openclaw.json" << 'EOF'
 {
   "agents": {
     "defaults": {
@@ -66,9 +67,12 @@ cat > "./openclaw.json" << 'EOF'
 }
 EOF
 
+echo "openclaw.json written to /root/.openclaw/openclaw.json"
+cat /root/.openclaw/openclaw.json
+
 # Step 3: Start openclaw gateway on localhost:18790 and forward to 0.0.0.0:18789
 echo "Starting OpenClaw Gateway on localhost:18790..."
-npx openclaw gateway --port 18790 --allow-unconfigured &
+npx openclaw gateway --port 18790 &
 GATEWAY_PID=$!
 
 echo "Starting socat port forwarder (0.0.0.0:18789 -> 127.0.0.1:18790)..."
