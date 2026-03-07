@@ -29,12 +29,12 @@ echo "AGENTS.md written to $WORKSPACE_DIR"
 ls "$WORKSPACE_DIR"
 
 # Step 2: Write openclaw.json – forcing OpenAI and enabling tools
-cat > "$OPENCLAW_HOME/openclaw.json" << EOF
+cat > "$OPENCLAW_HOME/openclaw.json" << 'EOF'
 {
   "agents": {
     "defaults": {
       "model": { "primary": "openai/gpt-4o" },
-      "workspace": "$WORKSPACE_DIR"
+      "workspace": "/root/.openclaw/workspace"
     }
   },
   "tools": {
