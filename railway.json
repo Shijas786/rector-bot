@@ -1,0 +1,22 @@
+{
+    "$schema": "https://railway.app/railway.schema.json",
+    "services": {
+        "openclaw-predictor-frontend": {
+            "build": {
+                "builder": "NIXPACKS",
+                "rootDirectory": "frontend"
+            },
+            "deploy": {
+                "startCommand": "npm run start",
+                "healthcheckPath": "/",
+                "restartPolicyType": "ON_FAILURE"
+            }
+        },
+        "openclaw-predictor-agent": {
+            "build": {
+                "builder": "DOCKERFILE",
+                "dockerfilePath": "rector/Dockerfile"
+            }
+        }
+    }
+}
