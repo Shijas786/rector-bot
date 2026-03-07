@@ -62,11 +62,19 @@ cat > "$OPENCLAW_HOME/openclaw.json" << 'EOF'
 }
 EOF
 
-# Auto-approve the Telegram pairing
+# Step 3: Start openclaw gateway in background
+echo "Starting OpenClaw Gateway in background..."
+npx openclaw gateway --port 18789 --config "$OPENCLAW_HOME/openclaw.json" --verbose &
+GATEWAY_PID=$!
+
+# Wait for gateway to initialize
+echo "Waiting 15s for gateway to initialize..."
+sleep 15
+
+# Step 4: Auto-approve the Telegram pairing
 echo "Verifying Telegram pairing..."
 npx openclaw pairing approve telegram CYXPFK84 || echo "Pairing verification skipped or failed"
 
-# Start openclaw gateway – it will auto-detect $OPENCLAW_HOME/openclaw.json
-# The OPENAI_API_KEY is already in the environment via Railway
-echo "Starting OpenClaw Gateway on port 18789..."
-npx openclaw gateway --port 18789 --verbose
+# Step 5: Keep the process alive by waiting on the gateway
+echo "Rector is now monitoring for messages. Gateway PID: $GATEWAY_PID"
+wait $GATEWAY_PID
