@@ -9,31 +9,25 @@ cp /app/rector/SOUL.md "$WORKSPACE_DIR/SOUL.md"
 
 cat > "$WORKSPACE_DIR/AGENTS.md" << 'EOF'
 # Rector Core Logic
-When a user wants to make a prediction, execute the `record_prediction` tool. 
-When a user asks for analysis of a token, run the `analyse_token` tool.
+When a user wants to make a prediction, use the `bash` tool to run the predict script in /app/agent.
+When a user asks for analysis of a token, use the `bash` tool to run the analyse script in /app/agent.
+Refer to the rector-predictor skill for exact commands.
 EOF
+
+# Copy skills into the workspace
+mkdir -p "$WORKSPACE_DIR/skills"
+cp -r /app/rector/skills/* "$WORKSPACE_DIR/skills/"
 
 echo "Workspace initialized at $WORKSPACE_DIR"
 ls "$WORKSPACE_DIR"
 
-# Step 2: Write openclaw.json with MCP server hooked up
+# Step 2: Write openclaw.json (skills handle tool routing)
 cat > "./openclaw.json" << 'EOF'
 {
   "agents": {
     "defaults": {
       "model": { "primary": "openai/gpt-4o" },
       "workspace": "/root/.openclaw/workspace"
-    }
-  },
-  "mcp": {
-    "servers": {
-      "rector-agent": {
-        "command": "sh",
-        "args": ["-c", "cd /app/agent && npx tsx src/mcp/mcpServer.ts"],
-        "env": {
-          "NODE_ENV": "production"
-        }
-      }
     }
   },
   "tools": {
