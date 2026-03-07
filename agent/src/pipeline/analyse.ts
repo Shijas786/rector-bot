@@ -88,32 +88,29 @@ async function runAIAnalysis(data: MarketData): Promise<{
     resistance: number;
     aiTake: string;
 }> {
-    const prompt = `You are an AI trading assistant for Binance traders.
-
-Analyse this token: ${data.symbol}
-
-Data from Binance API:
-- Current price: $${data.price}
-- 24h change: ${data.change24h}%
-- 24h volume: ${data.volume}
-- 7d OHLCV: ${JSON.stringify(data.ohlcv)}
-
-Provide:
-1. Trend direction (bullish/bearish/neutral)
-2. Key support level (number only)
-3. Key resistance level (number only)
-4. Brief AI take (2-3 sentences max)
-
-Be concise. Traders are busy.
-Use simple language. No jargon.
-
-Return ONLY JSON:
-{
-  "trend": "bullish|bearish|neutral",
-  "support": 580,
-  "resistance": 650,
-  "aiTake": "2-3 sentence analysis"
-}`;
+    const prompt = `You are Rector, a "smart friend" trading assistant for Binance traders.
+    
+    Analyze this token: ${data.symbol}
+    
+    Data from Binance API:
+    - Current price: $${data.price}
+    - 24h change: ${data.change24h}%
+    - 24h volume: ${data.volume}
+    - 7d OHLCV: ${JSON.stringify(data.ohlcv)}
+    
+    Provide:
+    1. Trend direction (bullish/bearish/neutral)
+    2. Key support level (number only)
+    3. Key resistance level (number only)
+    4. Brief AI take (2-3 sentences max). Use a casual, insightful "smart friend" tone. (e.g., "Pretty bullish honestly. Breaking $600 with strong volume.")
+    
+    Return ONLY JSON:
+    {
+      "trend": "bullish|bearish|neutral",
+      "support": 580,
+      "resistance": 650,
+      "aiTake": "your analysis"
+    }`;
 
     const response = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -135,19 +132,19 @@ export async function analyseToken(symbol: string): Promise<AnalysisResult> {
 
     const volumeRatio = data.volume / data.avgVolume;
     const changeEmoji = data.change24h >= 0 ? "📈" : "📉";
-    const volumeStatus = volumeRatio > 1.5 ? "⚡ above average" : volumeRatio < 0.7 ? "📉 below average" : "📊 average";
 
     const formattedMessage = `📊 ${data.symbol}/USDT Analysis
 ─────────────────────
 Price:      $${data.price.toLocaleString()}
 24h Change: ${data.change24h >= 0 ? "+" : ""}${data.change24h.toFixed(1)}% ${changeEmoji}
-Volume:     ${volumeRatio.toFixed(1)}x avg ${volumeStatus}
-Trend:      ${analysis.trend.charAt(0).toUpperCase() + analysis.trend.slice(1)}
-Support:    $${analysis.support.toLocaleString()}
-Resistance: $${analysis.resistance.toLocaleString()}
 
-🤖 AI Take:
-${analysis.aiTake}`;
+AI Take:
+"${analysis.aiTake}"
+
+Trend: ${analysis.trend.charAt(0).toUpperCase() + analysis.trend.slice(1)}
+Target Resistance: $${analysis.resistance.toLocaleString()}
+
+Want me to set an alert at $${analysis.resistance.toLocaleString()}? ✅`;
 
     return {
         symbol: data.symbol,

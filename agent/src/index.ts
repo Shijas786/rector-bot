@@ -320,21 +320,21 @@ ${prediction.txHashSubmit ? `\n🔗 bscscan.com/tx/${prediction.txHashSubmit}` :
 }
 
 function handleHelp(): string {
-    return `🤖 Rector Prediction Assistant
+    return `Hey! I'm Rector, your Binance trading assistant. I'm here to help you dominate the charts. 🚀
 
-I analyse Binance markets, send smart alerts, and verify your predictions onchain on BSC.
+I can:
+📊 **Analyse** any token
+🚨 **Alert** you on price moves
+🎯 **Verify** your predictions onchain
 
-Commands:
-/analyse [token]     → AI market analysis
-/predict [claim]     → submit a prediction
-/leaderboard         → top predictors this month
-/mystats            → your prediction history
-/check [id]          → check prediction status
-/help               → this message
+Try these commands:
+/analyse BNB     → get my take on BNB
+/predict BNB hits $1000 → record your call
+/leaderboard     → see who's winning
+/mystats         → check your accuracy
+/check [id]      → view prediction proof
 
-Examples:
-/analyse BNB
-/predict BNB hits $1000 before Dec 2026`;
+Ready to start? Just type \`/analyse BNB\``;
 }
 
 function extractResolutionDate(text: string): string {
