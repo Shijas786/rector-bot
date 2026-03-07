@@ -4,6 +4,23 @@
 export WORKSPACE_DIR="/root/.openclaw/workspace"
 mkdir -p "$WORKSPACE_DIR"
 
+# Generate .env for the agent scripts from Railway env vars
+cat > /app/agent/.env << ENVEOF
+OPENAI_API_KEY=${OPENAI_API_KEY}
+DATABASE_URL=${DATABASE_URL}
+BINANCE_API_URL=${BINANCE_API_URL:-https://api.binance.com}
+BINANCE_WS_URL=${BINANCE_WS_URL:-wss://stream.binance.com:9443}
+BINANCE_API_KEY=${BINANCE_API_KEY}
+BINANCE_SECRET_KEY=${BINANCE_SECRET_KEY}
+PRIVATE_KEY=${PRIVATE_KEY}
+PREDICTION_REGISTRY_ADDRESS=${PREDICTION_REGISTRY_ADDRESS}
+POLYMARKET_API_KEY=${POLYMARKET_API_KEY}
+POLYMARKET_SECRET=${POLYMARKET_SECRET}
+POLYMARKET_PASSPHRASE=${POLYMARKET_PASSPHRASE}
+NODE_ENV=production
+ENVEOF
+echo "Agent .env generated"
+
 # Step 1: Seed the workspace with the real SOUL.md and AGENTS.md
 cp /app/rector/SOUL.md "$WORKSPACE_DIR/SOUL.md"
 
