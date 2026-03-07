@@ -54,6 +54,7 @@ cat > "./openclaw.json" << 'EOF'
   },
   "gateway": {
     "mode": "local",
+    "host": "0.0.0.0",
     "auth": {
       "token": "${OPENCLAW_GATEWAY_TOKEN}"
     }
@@ -63,7 +64,7 @@ EOF
 
 # Step 3: Start openclaw gateway in background (detects ./openclaw.json)
 echo "Starting OpenClaw Gateway..."
-npx openclaw gateway --port 18789 --allow-unconfigured &
+npx openclaw gateway --host 0.0.0.0 --port 18789 --allow-unconfigured &
 GATEWAY_PID=$!
 
 # Wait for gateway to initialize
