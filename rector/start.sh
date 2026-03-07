@@ -28,8 +28,11 @@ cat > "./openclaw.json" << 'EOF'
   "mcp": {
     "servers": {
       "rector-agent": {
-        "command": "/app/agent/node_modules/.bin/tsx",
-        "args": ["/app/agent/src/mcp/mcpServer.ts"]
+        "command": "node",
+        "args": ["--import", "tsx", "/app/agent/src/mcp/mcpServer.ts"],
+        "env": {
+          "NODE_ENV": "production"
+        }
       }
     }
   },
