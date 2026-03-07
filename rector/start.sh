@@ -63,8 +63,10 @@ cat > "$OPENCLAW_HOME/openclaw.json" << 'EOF'
 EOF
 
 # Auto-approve the Telegram pairing
-npx openclaw pairing approve telegram CYXPFK84 2>/dev/null || true
+echo "Verifying Telegram pairing..."
+npx openclaw pairing approve telegram CYXPFK84 || echo "Pairing verification skipped or failed"
 
 # Start openclaw gateway – it will auto-detect $OPENCLAW_HOME/openclaw.json
 # The OPENAI_API_KEY is already in the environment via Railway
-npx openclaw gateway --port 18789
+echo "Starting OpenClaw Gateway on port 18789..."
+npx openclaw gateway --port 18789 --verbose
