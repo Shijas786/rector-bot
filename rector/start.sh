@@ -1,14 +1,11 @@
 #!/bin/sh
 set -e
-sleep 2
 
-mkdir -p /root/.openclaw
-mkdir -p /home/node/.openclaw
+# Setup OpenClaw environment
+mkdir -p /root/.openclaw/skills
+cp -r /app/rector/skills/* /root/.openclaw/skills/ || true
 
-rm -f /root/.openclaw/openclaw.json
-rm -f /home/node/.openclaw/openclaw.json
-
-# Write minimal openclaw config
+# Write minimal openclaw config from env
 cat > /root/.openclaw/openclaw.json << EOF
 {
   "agents": {
@@ -32,33 +29,5 @@ cat > /root/.openclaw/openclaw.json << EOF
 }
 EOF
 
-# Ensure skills are present in the OpenClaw home
-mkdir -p /root/.openclaw/skills
-cp -r /app/rector/skills/* /root/.openclaw/skills/ || true
-
-mkdir -p /root/.openclaw/agents/main/agent
-cat > /root/.openclaw/agents/main/agent/auth-profiles.json << EOF
-{
-  "default": {
-    "openai": {
-      "apiKey": "${OPENAI_API_KEY}"
-    }
-  }
-}
-EOF
-
-cp /root/.openclaw/openclaw.json /home/node/.openclaw/openclaw.json || true
-cp /root/.openclaw/openclaw.json /app/rector/openclaw.json || true
-
-export OPENCLAW_SKIP_ONBOARD=true
-
-npx openclaw channels add \
-  --channel telegram \
-  --token "${TELEGRAM_BOT_TOKEN}" || true
-
-# Start openclaw gateway
-npx openclaw gateway --port 18789 --allow-unconfigured &
-sleep 5
-npx openclaw channels login
-npx openclaw telegram
-wait
+# Start openclaw gateway (Auto-detects Telegram from config)
+npx openclaw gateway --port 18789 --allow-unconfigured
