@@ -54,7 +54,7 @@ cat > "./openclaw.json" << 'EOF'
   },
   "gateway": {
     "mode": "local",
-    "address": "0.0.0.0",
+    "port": 18790,
     "auth": {
       "token": "${OPENCLAW_GATEWAY_TOKEN}"
     }
@@ -62,11 +62,13 @@ cat > "./openclaw.json" << 'EOF'
 }
 EOF
 
-# Step 3: Start openclaw gateway in background (detects ./openclaw.json)
-echo "Starting OpenClaw Gateway..."
-export HOST=0.0.0.0
-npx openclaw gateway --port 18789 --allow-unconfigured &
+# Step 3: Start openclaw gateway on localhost:18790 and forward to 0.0.0.0:18789
+echo "Starting OpenClaw Gateway on localhost:18790..."
+npx openclaw gateway --port 18790 --allow-unconfigured &
 GATEWAY_PID=$!
+
+echo "Starting socat port forwarder (0.0.0.0:18789 -> 127.0.0.1:18790)..."
+socat TCP-LISTEN:18789,fork,reuseaddr TCP:127.0.0.1:18790 &
 
 # Wait for gateway to initialize
 echo "Waiting 15s for gateway to initialize..."
