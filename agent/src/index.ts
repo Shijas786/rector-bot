@@ -4,6 +4,8 @@ import { prisma } from "./db/prisma.js";
 import { mcpClient } from "./mcp/client.js";
 import { analyseToken } from "./pipeline/analyse.js";
 import { disambiguatePrediction, formatDisambiguation, DisambiguationResult } from "./pipeline/disambiguate.js";
+export { disambiguatePrediction, formatDisambiguation };
+export type { DisambiguationResult };
 import { buildRunbook } from "./pipeline/buildRunbook.js";
 import { uploadRunbook } from "./mcp/greenfield.js";
 import { submitPrediction, getAccuracy, getPrediction } from "./mcp/bsc.js";
@@ -104,7 +106,7 @@ export async function handleMessage(
 /help               → all commands`;
 }
 
-async function handleAnalyse(telegramId: string, symbol: string): Promise<string> {
+export async function handleAnalyse(telegramId: string, symbol: string): Promise<string> {
     try {
         const result = await analyseToken(symbol);
         userState.set(telegramId, {
@@ -118,7 +120,7 @@ async function handleAnalyse(telegramId: string, symbol: string): Promise<string
     }
 }
 
-async function handlePredict(telegramId: string, claim: string): Promise<string> {
+export async function handlePredict(telegramId: string, claim: string): Promise<string> {
     try {
         // Extract resolution date from claim or default to end of year
         const resolutionDate = extractResolutionDate(claim);
@@ -217,7 +219,7 @@ Your profile:
     }
 }
 
-async function handleLeaderboard(): Promise<string> {
+export async function handleLeaderboard(): Promise<string> {
     const users = await prisma.user.findMany({
         include: {
             predictions: {
@@ -256,7 +258,7 @@ ${rows}
 All verified onchain BSC ✅`;
 }
 
-async function handleMyStats(userId: string, telegramId: string): Promise<string> {
+export async function handleMyStats(userId: string, telegramId: string): Promise<string> {
     const predictions = await prisma.prediction.findMany({
         where: { userId },
         orderBy: { createdAt: "desc" },
@@ -341,7 +343,7 @@ Try these commands:
 Ready to start? Just type \`/analyse BNB\``;
 }
 
-function extractResolutionDate(text: string): string {
+export function extractResolutionDate(text: string): string {
     // Try to extract date patterns
     const decMatch = text.match(/(?:dec|december)\s*(\d{4})/i);
     if (decMatch) return `${decMatch[1]}-12-31T23:59:00Z`;
@@ -409,6 +411,11 @@ async function main() {
 
         console.log("📝 Dev mode — type commands here (e.g. /analyse BNB)\n");
     }
+}
+
+if (import.meta.url === `file://${process.argv[1]}` || process.env.NODE_ENV === "production") {
+    // In production or when run directly, we start the worker
+    // But for API imports, we might want to skip the stdin loop
 }
 
 main().catch(console.error);

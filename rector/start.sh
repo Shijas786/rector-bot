@@ -1,15 +1,13 @@
-#!/bin/sh
-set -e
-
-# Setup OpenClaw environment
-export OPENCLAW_HOME="$(pwd)/.openclaw"
-export OPENCLAW_CONFIG_PATH="$OPENCLAW_HOME/openclaw.json"
-WORKSPACE_DIR="$OPENCLAW_HOME/workspace"
-
-mkdir -p "$WORKSPACE_DIR"
-
-echo "Using OPENCLAW_HOME: $OPENCLAW_HOME"
-echo "Using WORKSPACE: $WORKSPACE_DIR"
+# Step 0: Start Rector API Server
+# This is our "Brain" that handles database, BSC, and complex logic
+echo "Starting Rector Agent API..."
+cd ../agent
+# Generate Prisma client if it doesn't exist
+npx prisma generate
+# Start API in background
+NODE_ENV=production npx tsx src/api.ts &
+sleep 5
+cd ../rector
 
 # Step 1: Create SOUL.md and AGENTS.md in the workspace
 cat > "$WORKSPACE_DIR/SOUL.md" << 'EOF'
@@ -21,42 +19,38 @@ You are **Rector**, a sharp, insightful, and proactive assistant for Binance tra
 ## Personality
 - **Casual & Direct**: Text like a knowledgeable friend. (e.g., "Pretty bullish honestly. Breaking $600 with strong volume.")
 - **Proactive**: Offer the next step. Suggest alerts and predictions.
-- **Data-First**: Always fetch live data from Binance before speaking.
+- **Data-First**: Always fetch live data before speaking.
 EOF
 
 cat > "$WORKSPACE_DIR/AGENTS.md" << 'EOF'
-# Rector: Smart Friend Rules
+# Rector — Crypto Prediction Bot
 
-## RULE 1 - The Welcome (/start)
-If the user says /start or is new:
-- Use the welcome message from SOUL.md.
-- Be hyped but helpful.
+## Live Data Tools
+For live prices or stats, use these commands via exec. NEVER guess.
 
-## RULE 2 - Mandatory Tool Usage (Binance)
-For ANY query about cryptocurrency prices (BNB, BTC, ETH, etc.), you MUST call `web_fetch` on the Binance API BEFORE responding. Even if you think you know the price, FETCH IT.
-- BNB: https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT
-- BTC: https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT
-- ETH: https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT
+### 1. Get live crypto price:
+exec: curl -s http://localhost:3001/price/BNB
+(Replace BNB with any token symbol like BTC, SOL, etc.)
 
-## RULE 3 - Mandatory Tool Usage (Polymarket)
-For prediction market queries, use `web_fetch` on:
-- Active: https://gamma-api.polymarket.com/events?active=true&closed=false&limit=10
-- Search: https://gamma-api.polymarket.com/events?search={topic}&active=true
+### 2. Record a prediction on-chain:
+exec: curl -s -X POST http://localhost:3001/predict -H "Content-Type: application/json" -d '{"telegramId":"{{TELEGRAM_ID}}","username":"{{USERNAME}}","claimText":"{{CLAIM}}"}'
+- Use this when a user confirms they want to record a "bold call".
+- {{TELEGRAM_ID}} and {{USERNAME}} are available in your context.
 
-## RULE 4 - The Prediction Recording Loop
-When a user makes a prediction (e.g., "BNB hits $1000") or a "bold call":
-1. ALWAYS ask: "That's a bold call! Want me to record this onchain so we can prove you were right later? 🎯"
-2. If they say YES:
-   - Call the `record_prediction` tool from `rector-agent`.
-   - Arguments: `claim` (the prediction), `telegramId` (user's ID), `username` (user's handle).
-3. Provide the profile link: "Check your verified calls: https://rector-bot.js.org/profile/@username"
+### 3. Leaderboard:
+exec: curl -s http://localhost:3001/leaderboard
 
-## RULE 5 - Tone
-No "AI assistant" talk. Be the smart friend. No generic financial advice; use live data.
+### 4. User stats:
+exec: curl -s http://localhost:3001/stats/{{TELEGRAM_ID}}
+
+## Core Rules
+1. **Always Fetch**: Before talking about price, call endpoint #1.
+2. **The Hook**: When a user predicts something, ask: "That's a bold call! Want me to record this onchain so we can prove you were right later? 🎯"
+3. **Recording**: If they say YES, call endpoint #2. Provide the result message and the profile link: https://rector-bot.js.org/profile/@{{USERNAME}}
+4. **Tone**: No "AI assistant" talk. Be the smart friend. No generic financial advice.
 EOF
 
 # Step 2: Write openclaw.json
-# We register our local agent as an MCP server so the bot can call record_prediction
 cat > "$OPENCLAW_CONFIG_PATH" << EOF
 {
   "agents": {
@@ -71,17 +65,12 @@ cat > "$OPENCLAW_CONFIG_PATH" << EOF
       "token": "${OPENCLAW_GATEWAY_TOKEN}"
     }
   },
-  "mcpServers": {
-    "rector-agent": {
-      "command": "npx",
-      "args": ["tsx", "/root/agent/src/mcp/mcpServer.ts"]
-    }
-  },
   "tools": {
     "web": {
       "fetch": { "enabled": true },
       "search": { "enabled": true }
-    }
+    },
+    "exec": { "enabled": true }
   },
   "channels": {
     "telegram": {
@@ -97,5 +86,4 @@ EOF
 ls -R "$OPENCLAW_HOME"
 
 # Step 4: Start openclaw gateway
-# We enable verbose logging and ensure the home is used
 DEBUG=openclaw:* npx openclaw gateway --port 18789 --allow-unconfigured --verbose

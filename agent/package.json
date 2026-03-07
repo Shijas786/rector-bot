@@ -1,6 +1,7 @@
 {
     "name": "openclaw-predictor-agent",
     "version": "1.0.0",
+    "type": "module",
     "description": "AI agent for Binance market analysis and prediction verification",
     "main": "src/index.ts",
     "scripts": {
@@ -18,11 +19,13 @@
         "bullmq": "^5.1.0",
         "dotenv": "^16.4.1",
         "ethers": "^6.11.0",
+        "express": "^5.2.1",
         "ioredis": "^5.3.2",
         "openai": "^4.28.0",
         "ws": "^8.16.0"
     },
     "devDependencies": {
+        "@types/express": "^5.0.6",
         "@types/node": "^20.11.0",
         "@types/ws": "^8.5.10",
         "prisma": "^5.9.0",
