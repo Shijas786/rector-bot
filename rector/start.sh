@@ -33,11 +33,15 @@ cat > "./openclaw.json" << 'EOF'
   },
   "tools": {
     "web": {
-      "fetch": { "enabled": true }
+      "fetch": { "enabled": true },
+      "search": { "enabled": true }
     },
     "exec": {
+      "enabled": true,
+      "security": "full",
+      "ask": "off",
       "backgroundMs": 10000,
-      "timeoutSec": 30
+      "timeoutSec": 60
     }
   },
   "channels": {
