@@ -148,7 +148,11 @@ async function handleConfirmation(
     return "Nothing to confirm. Type /help for commands.";
 }
 
-async function executePredictionPipeline(
+/**
+ * Execute the full onchain prediction pipeline.
+ * Exported for use by MCP server.
+ */
+export async function executePredictionPipeline(
     userId: string,
     telegramId: string,
     disambiguation: DisambiguationResult
