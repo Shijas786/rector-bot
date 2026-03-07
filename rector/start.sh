@@ -28,6 +28,9 @@ EOF
 echo "AGENTS.md written to $WORKSPACE_DIR"
 ls "$WORKSPACE_DIR"
 
+# Auto-approve the Telegram pairing – this allows Rector to wake up immediately!
+npx openclaw pairing approve telegram CYXPFK84 2>/dev/null || true
+
 # Start openclaw gateway
 # We use --allow-unconfigured to run with env vars (TELEGRAM_BOT_TOKEN)
 npx openclaw gateway --port 18789 --allow-unconfigured
