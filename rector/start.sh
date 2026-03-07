@@ -64,6 +64,6 @@ EOF
 # Auto-approve the Telegram pairing
 npx openclaw pairing approve telegram CYXPFK84 2>/dev/null || true
 
-# Start openclaw gateway – pointing explicitly to our config and forcing OpenAI
+# Start openclaw gateway – it will auto-detect $OPENCLAW_HOME/openclaw.json
 # The OPENAI_API_KEY is already in the environment via Railway
-npx openclaw gateway --port 18789 --config "$OPENCLAW_HOME/openclaw.json"
+npx openclaw gateway --port 18789
