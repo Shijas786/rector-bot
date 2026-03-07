@@ -54,6 +54,7 @@ cat > "$OPENCLAW_HOME/openclaw.json" << EOF
     }
   },
   "gateway": {
+    "mode": "local",
     "auth": {
       "token": "${OPENCLAW_GATEWAY_TOKEN}"
     }
