@@ -64,7 +64,7 @@ EOF
 
 # Step 3: Start openclaw gateway in background
 echo "Starting OpenClaw Gateway in background..."
-npx openclaw gateway --port 18789 --config "$OPENCLAW_HOME/openclaw.json" --verbose &
+npx openclaw gateway --port 18789 &
 GATEWAY_PID=$!
 
 # Wait for gateway to initialize
