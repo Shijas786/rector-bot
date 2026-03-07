@@ -43,7 +43,6 @@ cat > "/root/.openclaw/openclaw.json" << 'EOF'
       "search": { "enabled": true }
     },
     "exec": {
-      "enabled": true,
       "security": "full",
       "ask": "off",
       "backgroundMs": 10000,
