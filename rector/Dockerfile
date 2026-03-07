@@ -2,22 +2,24 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# Install git and C++ build tools required by native node modules like node-llama-cpp
+# Install git, C++ build tools, and socat
 RUN apk add --no-cache git python3 make g++ build-base socat
 
-# Create a package.json and set flags to skip the unnecessary C++ Local-LLM compilation for Alpine
-RUN npm init -y
-ENV NODE_LLAMA_CPP_SKIP_DOWNLOAD=true
-RUN npm install openclaw@latest
-RUN npm install @bnb-chain/mcp@latest
+# Setup root workspace
+COPY package*.json ./
+RUN npm install openclaw@latest @bnb-chain/mcp@latest
 
+# Copy agent backend and rector config
+COPY agent/ /app/agent/
 COPY rector/ /app/rector/
+
+# Install Agent dependencies (including MCP and Prisma)
+WORKDIR /app/agent
+RUN npm install
+RUN npx prisma generate
 
 EXPOSE 18789
 
-# Switch path so openclaw.json is naturally detected
+# Start script
 WORKDIR /app/rector
-
-
-# Execute the shell script that boots both the gateway and telegram worker
 CMD ["./start.sh"]

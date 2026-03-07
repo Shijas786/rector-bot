@@ -1,39 +1,36 @@
 #!/bin/sh
 
-# Fix paths - use current directory for openclaw.json auto-detection
+# Setup workspace
 export WORKSPACE_DIR="/root/.openclaw/workspace"
 mkdir -p "$WORKSPACE_DIR"
 
-# Write SOUL.md - Defines the persona
-cat > "$WORKSPACE_DIR/SOUL.md" << 'EOF'
-# Rector: Your Smart Binance Friend
-You are Rector, a sharp crypto assistant for BNB traders.
-Be casual, direct, and data-first. Text like a knowledgeable friend.
-EOF
+# Step 1: Seed the workspace with the real SOUL.md and AGENTS.md
+cp /app/rector/SOUL.md "$WORKSPACE_DIR/SOUL.md"
 
-# Write AGENTS.md - Defines the behavior rules
 cat > "$WORKSPACE_DIR/AGENTS.md" << 'EOF'
-# Rector Rules
-
-When a user makes a price prediction (e.g. "BTC will crash to $50k"), you MUST:
-1. Fetch the live price first using web_fetch: https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT
-2. Then say: "That's a bold call! Want me to record this on-chain so you can prove it later? Reply YES to confirm 🎯"
-3. If they reply YES, confirm the prediction is being recorded and give them: https://rector-bot.js.org/profile/@USERNAME
-
-For any price question, ALWAYS use web_fetch on https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT first.
-Never say you cannot fetch prices.
+# Rector Core Logic
+When a user wants to make a prediction, execute the `record_prediction` tool. 
+When a user asks for analysis of a token, run the `analyse_token` tool.
 EOF
 
-echo "AGENTS.md written to $WORKSPACE_DIR"
+echo "Workspace initialized at $WORKSPACE_DIR"
 ls "$WORKSPACE_DIR"
 
-# Step 2: Write openclaw.json in current dir for auto-detection
+# Step 2: Write openclaw.json with MCP server hooked up
 cat > "./openclaw.json" << 'EOF'
 {
   "agents": {
     "defaults": {
       "model": { "primary": "openai/gpt-4o" },
       "workspace": "/root/.openclaw/workspace"
+    }
+  },
+  "mcp": {
+    "servers": {
+      "rector-agent": {
+        "command": "npx",
+        "args": ["tsx", "/app/agent/src/mcp/mcpServer.ts"]
+      }
     }
   },
   "tools": {
