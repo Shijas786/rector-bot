@@ -1,7 +1,6 @@
 #!/bin/sh
 
-# Fix paths - openclaw uses /root/.openclaw NOT /app/rector/.openclaw
-export OPENCLAW_HOME="/root/.openclaw"
+# Fix paths - use current directory for openclaw.json auto-detection
 export WORKSPACE_DIR="/root/.openclaw/workspace"
 mkdir -p "$WORKSPACE_DIR"
 
@@ -28,8 +27,8 @@ EOF
 echo "AGENTS.md written to $WORKSPACE_DIR"
 ls "$WORKSPACE_DIR"
 
-# Step 2: Write openclaw.json – forcing OpenAI and enabling tools
-cat > "$OPENCLAW_HOME/openclaw.json" << 'EOF'
+# Step 2: Write openclaw.json in current dir for auto-detection
+cat > "./openclaw.json" << 'EOF'
 {
   "agents": {
     "defaults": {
@@ -62,9 +61,9 @@ cat > "$OPENCLAW_HOME/openclaw.json" << 'EOF'
 }
 EOF
 
-# Step 3: Start openclaw gateway in background
-echo "Starting OpenClaw Gateway in background..."
-npx openclaw gateway --port 18789 &
+# Step 3: Start openclaw gateway in background (detects ./openclaw.json)
+echo "Starting OpenClaw Gateway..."
+npx openclaw gateway --port 18789 --allow-unconfigured &
 GATEWAY_PID=$!
 
 # Wait for gateway to initialize
