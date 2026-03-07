@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import Script from "next/script";
+import TelegramInit from "./TelegramInit";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Rector Predictor",
-  description: "Make predictions that resolve automatically onchain.",
-  keywords: ["BNB", "predictions", "crypto", "onchain", "verification", "AI"],
+  title: "Rector Oracle",
+  description: "Agentic Verification via OpenClaw Runbooks.",
+  keywords: ["BNB", "predictions", "crypto", "onchain", "verification", "AI", "OpenClaw", "Oracle"],
 };
 
 export default function RootLayout({
@@ -14,7 +16,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <Script
+          src="https://telegram.org/js/telegram-web-app.js"
+          strategy="beforeInteractive"
+        />
+      </head>
       <body>
+        <TelegramInit />
+
         <div className="app-container">
           {/* Left Vertical Sidebar */}
           <aside className="sidebar">

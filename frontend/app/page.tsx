@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Rector Predictor",
-  description: "Make predictions that resolve automatically onchain.",
+  title: "Rector Oracle",
+  description: "Agentic Verification via OpenClaw Runbooks.",
 };
 
 export default function HomePage() {
@@ -10,27 +10,27 @@ export default function HomePage() {
     <div className="container" style={{ paddingBottom: "2rem" }}>
       {/* ── Hero Section ── */}
       <div className="mt-8 mb-8" style={{ marginTop: "6rem" }}>
-        <h1 className="hero-title">Play with the Future</h1>
+        <h1 className="hero-title">Agentic Verification</h1>
 
         <div className="logic-block">
           <div className="logic-row">
             <span className="logic-label">If</span>
             <div className="logic-input">
               <div className="pfp-sm" style={{ background: "linear-gradient(135deg, #F3BA2F, #e2a822)" }}></div>
-              <span>BNB hits $1000 by December 2026</span>
+              <span>user merges PR to bnb-chain</span>
             </div>
           </div>
           <div className="logic-row">
             <span className="logic-label">Then</span>
             <div className="logic-input">
               <div className="pfp-sm" style={{ background: "linear-gradient(135deg, #627EEA, #4a66d1)" }}></div>
-              <span>execute smart contract payout</span>
+              <span>execute bounty payout on BSC</span>
             </div>
           </div>
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", gap: "1rem", marginBottom: "6rem" }}>
-          <a href="/predictions/47" className="btn btn-primary">Make a Claim</a>
+          <a href="/predictions/47" className="btn btn-primary">Create Runbook</a>
         </div>
       </div>
 
@@ -38,7 +38,7 @@ export default function HomePage() {
         <span className="btn-badge">USE CASES</span>
       </div>
       <h2 className="section-title" style={{ fontSize: "2.5rem", marginBottom: "3rem" }}>
-        Power Prediction Markets, Bounties, and Wills
+        Resolve Prediction Markets, Bounties, and Wills
       </h2>
 
       {/* ── Horizontal Scrolling Ticker ── */}

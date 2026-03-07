@@ -1,4 +1,5 @@
 import { readChainlinkPrice } from "../mcp/bsc.js";
+import { getPolymarketEvent, getMarketOutcomeYesPrice } from "../mcp/polymarket.js";
 
 /**
  * Runbook Execution Pipeline
@@ -42,6 +43,8 @@ export async function executeRunbook(runbookMarkdown: string): Promise<RunbookEx
                 result = await executeBscStep(step);
             } else if (step.type === "api_call" && step.source.includes("coingecko")) {
                 result = await executeCoinGeckoStep(step);
+            } else if (step.type === "api_call" && step.source.includes("polymarket.com")) {
+                result = await executePolymarketStep(step);
             } else {
                 result = {
                     stepId: step.id,
@@ -83,6 +86,9 @@ interface ParsedStep {
     id: number;
     type: string;
     source: string;
+    // ... Polymarket specific fields
+    eventId?: string;
+    marketIndex?: number;
     contract?: string;
     extract?: string;
     successCondition?: string;
@@ -103,11 +109,15 @@ function parseRunbookSteps(markdown: string): ParsedStep[] {
         const extractMatch = body.match(/Extract:\s*(.+)/);
         const successMatch = body.match(/Success:\s*(.+)/);
 
+        // Extract Polymarket Event ID if present in source URL
+        const eventIdMatch = sourceMatch?.[1]?.match(/events\/(\d+)/);
+
         steps.push({
             id,
             type: typeMatch?.[1] || "unknown",
             source: sourceMatch?.[1] || contractMatch?.[1] || "",
             contract: contractMatch?.[1],
+            eventId: eventIdMatch ? eventIdMatch[1] : undefined,
             extract: extractMatch?.[1]?.trim(),
             successCondition: successMatch?.[1]?.trim(),
         });
@@ -170,11 +180,40 @@ async function executeCoinGeckoStep(step: ParsedStep): Promise<StepResult> {
     };
 }
 
+async function executePolymarketStep(step: ParsedStep): Promise<StepResult> {
+    if (!step.eventId) {
+        throw new Error("No PolyMarket event ID found in source URL");
+    }
+
+    const yesPrice = await getMarketOutcomeYesPrice(step.eventId);
+    if (yesPrice === null) {
+        throw new Error(`Could not fetch Polymarket event ${step.eventId}`);
+    }
+
+    const event = await getPolymarketEvent(step.eventId);
+    let finding = `Polymarket "Yes" Probability = ${(yesPrice * 100).toFixed(1)}%`;
+    if (event?.closed) finding += " (MARKET CLOSED)";
+
+    return {
+        stepId: step.id,
+        type: step.type,
+        source: step.source,
+        value: yesPrice,
+        // Success: Polymarket resolves to 1 (True) or 0 (False), or user query targets a specific probability
+        passed: evaluateSuccess(step.successCondition || "", yesPrice),
+        finding,
+        error: null,
+    };
+}
+
 /**
  * Simple success condition evaluator.
- * Supports: value >= X, value > X, value <= X, value < X
+ * Supports: value >= X, value > X, value <= X, value < X, value == X
  */
 function evaluateSuccess(condition: string, value: number): boolean {
+    const eqMatch = condition.match(/== ?\$?([\d.]+)/);
+    if (eqMatch) return value === parseFloat(eqMatch[1]);
+
     const gteMatch = condition.match(/>= ?\$?([\d.]+)/);
     if (gteMatch) return value >= parseFloat(gteMatch[1]);
 
@@ -186,6 +225,10 @@ function evaluateSuccess(condition: string, value: number): boolean {
 
     const ltMatch = condition.match(/< ?\$?([\d.]+)/);
     if (ltMatch) return value < parseFloat(ltMatch[1]);
+
+    // Handle string "true/false" resolutions for Polymarket
+    if (condition.toLowerCase().includes("true") && value === 1) return true;
+    if (condition.toLowerCase().includes("false") && value === 0) return true;
 
     return false;
 }

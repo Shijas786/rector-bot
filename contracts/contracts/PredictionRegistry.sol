@@ -55,8 +55,8 @@ contract PredictionRegistry is AccessControl, ReentrancyGuard {
         _grantRole(AGENT_ROLE, _agent);
     }
 
-    /// @notice TX 1 — Submit prediction with runbook reference
-    /// @dev Agent calls this after user confirms on Telegram. Agent pays gas.
+    /// @notice TX 1 — Submit claim with generated Agentic Verification runbook reference
+    /// @dev OpenClaw Agent calls this after generating the runbook. Agent pays gas.
     function submitWithRunbook(
         string  calldata _claimText,
         string  calldata _disambiguated,
@@ -90,8 +90,8 @@ contract PredictionRegistry is AccessControl, ReentrancyGuard {
         emit PredictionSubmitted(id, _submitter, _resolutionDate);
     }
 
-    /// @notice TX 2 — Resolve prediction with evidence and attestation
-    /// @dev Agent calls this on resolution date. Agent pays gas.
+    /// @notice TX 2 — Agentic Oracle resolution with Greenfield evidence and ECDSA attestation
+    /// @dev OpenClaw Agent calls this on resolution date after executing the runbook. Agent pays gas.
     function resolveAndAttest(
         uint256 _id,
         bool    _outcome,

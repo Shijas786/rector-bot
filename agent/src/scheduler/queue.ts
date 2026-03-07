@@ -1,5 +1,5 @@
 import { Queue, Worker, Job } from "bullmq";
-import IORedis from "ioredis";
+import { Redis } from "ioredis";
 import { prisma } from "../db/prisma.js";
 import { downloadRunbook } from "../mcp/greenfield.js";
 import { executeRunbook } from "../pipeline/executeRunbook.js";
@@ -13,7 +13,7 @@ import { resolvePrediction, markInconclusive, getAccuracy } from "../mcp/bsc.js"
  */
 
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
-const connection = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
+const connection = new Redis(REDIS_URL, { maxRetriesPerRequest: null });
 
 const QUEUE_NAME = "prediction-resolution";
 

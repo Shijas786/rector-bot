@@ -22,6 +22,10 @@ interface MarketData {
         volume: number;
         timestamp: number;
     }>;
+    orderBook: {
+        bids: Array<[string, string]>; // [Price, Quantity]
+        asks: Array<[string, string]>;
+    };
 }
 
 interface AnalysisResult {
@@ -37,7 +41,7 @@ interface AnalysisResult {
 }
 
 /**
- * Fetch current price and 24h stats from Binance.
+ * Fetch current price, 24h stats, and Order Book depth from Binance.
  */
 async function fetchMarketData(symbol: string): Promise<MarketData> {
     const pair = `${symbol.toUpperCase()}USDT`;
@@ -69,6 +73,13 @@ async function fetchMarketData(symbol: string): Promise<MarketData> {
     // Calculate average volume from 7d data
     const avgVolume = ohlcv.reduce((sum, d) => sum + d.volume, 0) / ohlcv.length;
 
+    // Fetch Order Book Depth (top 50 levels) to find buy/sell walls
+    const depthRes = await fetch(`${BINANCE_API}/api/v3/depth?symbol=${pair}&limit=50`);
+    const depth = await depthRes.json() as {
+        bids: Array<[string, string]>;
+        asks: Array<[string, string]>;
+    };
+
     return {
         symbol: symbol.toUpperCase(),
         price: parseFloat(ticker.lastPrice),
@@ -76,11 +87,12 @@ async function fetchMarketData(symbol: string): Promise<MarketData> {
         volume: parseFloat(ticker.volume),
         avgVolume,
         ohlcv,
+        orderBook: depth,
     };
 }
 
 /**
- * Run GPT-4o market analysis on the data.
+ * Run GPT-4o market analysis on the data, leveraging Order Book depth.
  */
 async function runAIAnalysis(data: MarketData): Promise<{
     trend: string;
@@ -88,7 +100,11 @@ async function runAIAnalysis(data: MarketData): Promise<{
     resistance: number;
     aiTake: string;
 }> {
-    const prompt = `You are Rector, a "smart friend" trading assistant for Binance traders.
+    // Simplify order book for the prompt to fit context window
+    const topBids = data.orderBook.bids.slice(0, 10).map(b => `Price: ${b[0]}, Qty: ${b[1]}`);
+    const topAsks = data.orderBook.asks.slice(0, 10).map(a => `Price: ${a[0]}, Qty: ${a[1]}`);
+
+    const prompt = `You are an elite OpenClaw Agent and "smart friend" trading assistant.
     
     Analyze this token: ${data.symbol}
     
@@ -96,19 +112,23 @@ async function runAIAnalysis(data: MarketData): Promise<{
     - Current price: $${data.price}
     - 24h change: ${data.change24h}%
     - 24h volume: ${data.volume}
-    - 7d OHLCV: ${JSON.stringify(data.ohlcv)}
+    - 7d OHLCV context: ${JSON.stringify(data.ohlcv)}
+    
+    Order Book Depth (Find the walls!):
+    - Top Bids (Buy Walls): ${JSON.stringify(topBids)}
+    - Top Asks (Sell Walls): ${JSON.stringify(topAsks)}
     
     Provide:
     1. Trend direction (bullish/bearish/neutral)
-    2. Key support level (number only)
-    3. Key resistance level (number only)
-    4. Brief AI take (2-3 sentences max). Use a casual, insightful "smart friend" tone. (e.g., "Pretty bullish honestly. Breaking $600 with strong volume.")
+    2. Key support level based on Bid walls (number only)
+    3. Key resistance level based on Ask walls (number only)
+    4. Brief AI take (2-3 sentences max). Use a casual, insightful "smart friend" tone discussing the buy/sell walls. (e.g., "Massive buy wall at $580 acting as strong support. If we chew through the $600 ask wall, we're flying.")
     
     Return ONLY JSON:
     {
       "trend": "bullish|bearish|neutral",
       "support": 580,
-      "resistance": 650,
+      "resistance": 600,
       "aiTake": "your analysis"
     }`;
 

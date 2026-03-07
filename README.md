@@ -1,37 +1,41 @@
-# 🤖 Rector Predictor
+# 🤖 Rector Oracle (OpenClaw Agent)
 
-**An AI assistant that analyses Binance markets, sends smart alerts, and verifies predictions onchain — so your accuracy is proven forever.**
+**An OpenClaw AI assistant for Agentic Verification. We resolve prediction markets, bounties, and complex claims onchain using automated verification runbooks.**
 
-Built for the **BNB Chain AI Agent Hackathon** using [Rector](https://rector.ai) + [BNB Chain MCP](https://github.com/bnb-chain/bnbchain-mcp).
+Built for the **BNB Chain AI Agent Hackathon** using [OpenClaw](https://github.com/bnb-chain/openclaw) + [BNB Chain MCP](https://github.com/bnb-chain/bnbchain-mcp).
 
 ---
 
-## ⚡ What It Does
+## ⚡ What It Does (Agentic Verification)
+
+Most Oracles (like Chainlink) only handle simple price feeds. **Rector Oracle** uses OpenClaw to handle complex, real-world claims (e.g., *"Did user @abc merge their PR to the bnb-chain repo?"* or *"Did BNB flip ETH in market cap?"*). 
 
 | Feature | Description |
 |---|---|
-| **AI Market Analysis** | `/analyse BNB` — real-time Binance data + GPT-4o insights |
-| **Prediction Verification** | `/predict BNB hits $1000` — recorded & verified onchain BSC |
+| **Claim Disambiguation** | `/predict [claim]` — The agent analyzes the claim, identifies requirements, and generates a **Verification Runbook**. |
+| **Agentic Execution** | On the resolution date, OpenClaw executes the runbook, querying APIs (Binance, GitHub, etc.) to evaluate the truth. |
+| **Onchain Attestation** | The outcome, cited evidence, and cryptographic signature are stored on **BNB Greenfield** and attested on **BSC**. |
+
+Smart contracts can instantly consume these attestations to resolve prediction markets, release escrow bounties, or execute wills.
 
 ## 🏗 Architecture
 
 ```
-Telegram → Rector → Agent Pipeline
-                         │
-    ┌────────────────────┼────────────────────┐
-    ▼                                         ▼
-  Analyse                                  Predict
-  Binance API                              GPT-4o → Greenfield → BSC
-  + GPT-4o                                 + BullMQ auto-resolve
+User Claim → OpenClaw Agent (Rector)
+                          │
+     ┌────────────────────┼────────────────────┐
+     ▼                    ▼                    ▼
+ Disambiguate        Agentic Verify      Onchain Attest
+ (GPT-4o)          (Binance API/Web)    (Greenfield + BSC)
 ```
 
 ## 📁 Project Structure
 
 ```
 ├── contracts/          ← PredictionRegistry.sol (Hardhat)
-├── rector/             ← Gateway config + SOUL.md
-├── agent/              ← TypeScript pipeline (OpenAI, MCP, BullMQ)
-├── frontend/           ← Next.js 14 explorer (5 pages)
+├── rector/             ← OpenClaw Gateway config
+├── agent/              ← TypeScript verification pipeline (OpenAI, MCP, BullMQ)
+├── frontend/           ← Next.js 14 Explorer (Inspired by Conductor.my)
 └── .env.example        ← Environment variables
 ```
 
@@ -71,7 +75,7 @@ npx hardhat run scripts/deploy.ts --network bscTestnet
 # Copy the address to .env → PREDICTION_REGISTRY_ADDRESS
 ```
 
-### 4. Setup Rector
+### 4. Setup Rector / OpenClaw
 
 ```bash
 npm install -g rector@latest
@@ -88,35 +92,31 @@ npm run prisma:push   # Create database tables
 npm run dev            # Start agent
 ```
 
-### 6. Start Frontend
+### 6. Start Frontend Explorer
 
 ```bash
 cd frontend
 npm run dev            # http://localhost:3000
 ```
 
-### 7. Start Rector Gateway
+### 7. Start Agent Gateway
 
 ```bash
 rector gateway --port 18789
 ```
 
-## 📱 Bot Commands
+## 📱 OpenClaw Bot Commands
 
 | Command | Description |
 |---|---|
-| `/analyse [token]` | AI market analysis |
-| `/predict [claim]` | Submit a prediction |
-| `/mystats` | Your prediction history |
-| `/check [id]` | Check prediction status |
-| `/help` | All commands |
+| `/predict [claim]` | Submit a claim for runbook generation |
+| `/analyse [token]` | AI market monitoring (Trading Tool) |
+| `/mystats` | Your verification history |
+| `/check [id]` | Check claim resolution status |
 
-## 🔗 Links
+## 🔗 Hackathon Fit
 
-- [Rector](https://rector.ai) — Agent framework
-- [BNB Chain MCP](https://github.com/bnb-chain/bnbchain-mcp) — BSC tools
-- [BSC Testnet Faucet](https://testnet.bnbchain.org/faucet-smart) — Get test BNB
-- [ERC-8004 Registry](https://www.8004scan.io/) — Agent identity
+This project addresses the **Smart Operations** and **Trading & Strategy Tools** tracks by providing an autonomous OpenClaw agent that can verify trading claims and automate smart contract operations/escrow.
 
 ## 💰 Monthly Costs
 

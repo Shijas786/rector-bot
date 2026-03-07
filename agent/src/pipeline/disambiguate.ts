@@ -12,7 +12,7 @@ export interface DisambiguationResult {
     entities: string[];
     successCriteria: string;
     verifiability: "HIGH" | "MEDIUM" | "LOW";
-    primarySource: "binance_api" | "chainlink_bsc" | "coingecko";
+    primarySource: "binance_api" | "polymarket_api" | "chainlink_bsc" | "coingecko";
     bscContract: string | null;
     ambiguities: string[];
     resolutionDate: string;
@@ -25,16 +25,19 @@ export async function disambiguatePrediction(
     rawText: string,
     resolutionDate: string
 ): Promise<DisambiguationResult> {
-    const prompt = `You are an onchain prediction verification assistant
-on BNB Smart Chain via OpenClaw.
+    const prompt = `You are an elite Agentic Verification Oracle on BNB Smart Chain via OpenClaw.
 
-User prediction: "${rawText}"
-Resolution date: ${resolutionDate}
+User claim/prediction: "${rawText}"
+Target resolution date: ${resolutionDate}
 
-Rewrite as precise verifiable statement.
-Extract: entities, success criteria, ambiguities.
+Your job is to rewrite this as a precise, mathematically and temporally verifiable statement.
+Extract: key entities, success criteria, and any ambiguities.
 Rate verifiability: HIGH / MEDIUM / LOW.
-Suggest verification sources — prefer Binance API first.
+
+Suggest the best verification source:
+- If it's about crypto prices on exchanges: prefer "binance_api" or "coingecko"
+- If it's about real-world events, politics, or pop-culture: prefer "polymarket_api"
+- If it's about on-chain DeFi data: prefer "chainlink_bsc"
 
 Return ONLY JSON:
 {
@@ -42,7 +45,7 @@ Return ONLY JSON:
   "entities": [...],
   "successCriteria": "...",
   "verifiability": "HIGH|MEDIUM|LOW",
-  "primarySource": "binance_api|chainlink_bsc|coingecko",
+  "primarySource": "binance_api|polymarket_api|chainlink_bsc|coingecko",
   "bscContract": "0x... or null",
   "ambiguities": [...],
   "resolutionDate": "${resolutionDate}"
