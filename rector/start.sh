@@ -27,19 +27,11 @@ cat > /root/.openclaw/openclaw.json << EOF
       "dmPolicy": "open",
       "allowFrom": ["*"]
     }
-  }
-}
-EOF
-
-cat > /root/.openclaw/mcp.json << EOF
-{
+  },
   "mcpServers": {
-    "binance-prices": {
+    "binance": {
       "command": "npx",
-      "args": ["-y", "mcp-server-ccxt"],
-      "env": {
-        "EXCHANGE": "binance"
-      }
+      "args": ["-y", "@snjyor/binance-mcp@latest"]
     },
     "bnbchain-mcp": {
       "command": "npx",
@@ -68,8 +60,6 @@ EOF
 
 cp /root/.openclaw/openclaw.json /home/node/.openclaw/openclaw.json || true
 cp /root/.openclaw/openclaw.json /app/rector/openclaw.json || true
-cp /root/.openclaw/mcp.json /home/node/.openclaw/mcp.json || true
-cp /root/.openclaw/mcp.json /app/rector/mcp.json || true
 
 export OPENCLAW_SKIP_ONBOARD=true
 
@@ -77,8 +67,4 @@ npx openclaw channels add \
   --channel telegram \
   --token "${TELEGRAM_BOT_TOKEN}" || true
 
-# Start binance server in background
-npx -y mcp-server-ccxt &
-
-# Boot gateway using mcp-config flag
-exec npx openclaw gateway --port 18789 --allow-unconfigured --mcp-config /root/.openclaw/mcp.json
+exec npx openclaw gateway --port 18789 --allow-unconfigured
