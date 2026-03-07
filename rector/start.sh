@@ -28,9 +28,42 @@ EOF
 echo "AGENTS.md written to $WORKSPACE_DIR"
 ls "$WORKSPACE_DIR"
 
-# Auto-approve the Telegram pairing – this allows Rector to wake up immediately!
+# Step 2: Write openclaw.json – forcing OpenAI and enabling tools
+cat > "$OPENCLAW_HOME/openclaw.json" << EOF
+{
+  "agents": {
+    "defaults": {
+      "model": { "primary": "openai/gpt-4o" },
+      "workspace": "$WORKSPACE_DIR"
+    }
+  },
+  "tools": {
+    "web": {
+      "fetch": { "enabled": true }
+    },
+    "exec": {
+      "backgroundMs": 10000,
+      "timeoutSec": 30
+    }
+  },
+  "channels": {
+    "telegram": {
+      "botToken": "${TELEGRAM_BOT_TOKEN}",
+      "dmPolicy": "open",
+      "allowFrom": ["*"]
+    }
+  },
+  "gateway": {
+    "auth": {
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
+    }
+  }
+}
+EOF
+
+# Auto-approve the Telegram pairing
 npx openclaw pairing approve telegram CYXPFK84 2>/dev/null || true
 
-# Start openclaw gateway
-# We use --allow-unconfigured to run with env vars (TELEGRAM_BOT_TOKEN)
-npx openclaw gateway --port 18789 --allow-unconfigured
+# Start openclaw gateway – pointing explicitly to our config and forcing OpenAI
+# The OPENAI_API_KEY is already in the environment via Railway
+npx openclaw gateway --port 18789 --config "$OPENCLAW_HOME/openclaw.json"
