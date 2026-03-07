@@ -12,5 +12,34 @@
         "auth": {
             "token": "${OPENCLAW_GATEWAY_TOKEN}"
         }
+    },
+    "plugins": {
+        "entries": {
+            "mcp-adapter": {
+                "enabled": true,
+                "config": {
+                    "servers": [
+                        {
+                            "name": "binance",
+                            "transport": "stdio",
+                            "command": "npx",
+                            "args": [
+                                "-y",
+                                "@snjyor/binance-mcp@latest"
+                            ]
+                        },
+                        {
+                            "name": "bnb-chain",
+                            "transport": "stdio",
+                            "command": "npx",
+                            "args": [
+                                "-y",
+                                "@bnb-chain/mcp"
+                            ]
+                        }
+                    ]
+                }
+            }
+        }
     }
 }

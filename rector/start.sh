@@ -8,7 +8,7 @@ mkdir -p /home/node/.openclaw
 rm -f /root/.openclaw/openclaw.json
 rm -f /home/node/.openclaw/openclaw.json
 
-# Write minimal openclaw config
+# Write minimal openclaw config (will be updated by the next tool call)
 cat > /root/.openclaw/openclaw.json << EOF
 {
   "agents": {
@@ -48,21 +48,16 @@ cp /root/.openclaw/openclaw.json /app/rector/openclaw.json || true
 
 export OPENCLAW_SKIP_ONBOARD=true
 
-# Install MCP plugins natively via OpenClaw's official command
-npx openclaw plugins install @bnb-chain/mcp
-npx openclaw plugins install @snjyor/binance-mcp@latest
+# Install the MCP adapter plugin (bridges MCP servers into OpenClaw natively)
+npx openclaw plugins install androidStern-personal/openclaw-mcp-adapter
 
 npx openclaw channels add \
   --channel telegram \
   --token "${TELEGRAM_BOT_TOKEN}" || true
 
-# Start gateway in background
+# Start openclaw gateway
 npx openclaw gateway --port 18789 --allow-unconfigured &
 sleep 5
-
-# Ensure Telegram is active
 npx openclaw channels login
 npx openclaw telegram
-
-# Keep container alive
 wait
