@@ -8,7 +8,7 @@ mkdir -p /home/node/.openclaw
 rm -f /root/.openclaw/openclaw.json
 rm -f /home/node/.openclaw/openclaw.json
 
-# Write minimal openclaw config (will be updated by the next tool call)
+# Write minimal openclaw config
 cat > /root/.openclaw/openclaw.json << EOF
 {
   "agents": {
@@ -32,6 +32,10 @@ cat > /root/.openclaw/openclaw.json << EOF
 }
 EOF
 
+# Ensure skills are present in the OpenClaw home
+mkdir -p /root/.openclaw/skills
+cp -r /app/rector/skills/* /root/.openclaw/skills/ || true
+
 mkdir -p /root/.openclaw/agents/main/agent
 cat > /root/.openclaw/agents/main/agent/auth-profiles.json << EOF
 {
@@ -47,9 +51,6 @@ cp /root/.openclaw/openclaw.json /home/node/.openclaw/openclaw.json || true
 cp /root/.openclaw/openclaw.json /app/rector/openclaw.json || true
 
 export OPENCLAW_SKIP_ONBOARD=true
-
-# Install the MCP adapter plugin (bridges MCP servers into OpenClaw natively)
-npx openclaw plugins install androidStern-personal/openclaw-mcp-adapter
 
 npx openclaw channels add \
   --channel telegram \
