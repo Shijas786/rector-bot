@@ -48,6 +48,12 @@ cat > /root/.openclaw/mcp.json << EOF
       "env": {
         "PRIVATE_KEY": "${PRIVATE_KEY}"
       }
+    },
+    "market-mcp": {
+      "command": "node",
+      "args": [
+        "/app/rector/market-mcp.js"
+      ]
     }
   }
 }
