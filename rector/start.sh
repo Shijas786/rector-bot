@@ -27,22 +27,6 @@ cat > /root/.openclaw/openclaw.json << EOF
       "dmPolicy": "open",
       "allowFrom": ["*"]
     }
-  },
-  "mcpServers": {
-    "binance": {
-      "command": "npx",
-      "args": ["-y", "@snjyor/binance-mcp@latest"]
-    },
-    "bnbchain-mcp": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@bnb-chain/mcp@latest"
-      ],
-      "env": {
-        "PRIVATE_KEY": "${PRIVATE_KEY}"
-      }
-    }
   }
 }
 EOF
@@ -63,8 +47,17 @@ cp /root/.openclaw/openclaw.json /app/rector/openclaw.json || true
 
 export OPENCLAW_SKIP_ONBOARD=true
 
+# Install MCP plugins into OpenClaw natively
+npx openclaw plugins install @bnb-chain/mcp
+npx openclaw plugins install @snjyor/binance-mcp@latest
+
 npx openclaw channels add \
   --channel telegram \
   --token "${TELEGRAM_BOT_TOKEN}" || true
 
-exec npx openclaw gateway --port 18789 --allow-unconfigured
+# Start openclaw gateway
+npx openclaw gateway --port 18789 --allow-unconfigured &
+sleep 5
+npx openclaw channels login
+npx openclaw telegram
+wait
