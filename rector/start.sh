@@ -117,12 +117,21 @@ curl -sf "https://raw.githubusercontent.com/bnb-chain/bnbchain-skills/main/skill
 
 # Step 2: Write openclaw.json
 mkdir -p /root/.openclaw
-cat > "/root/.openclaw/openclaw.json" << 'EOF'
+cat > "/root/.openclaw/openclaw.json" << EOF
 {
   "agents": {
     "defaults": {
       "model": { "primary": "openai/gpt-4o" },
-      "workspace": "/root/.openclaw/workspace"
+      "workspace": "$WORKSPACE_DIR"
+    }
+  },
+  "mcpServers": {
+    "bnb": {
+      "command": "npx",
+      "args": ["-y", "@bnb-chain/mcp@latest"],
+      "env": {
+        "PRIVATE_KEY": "${PRIVATE_KEY}"
+      }
     }
   },
   "tools": {
@@ -186,16 +195,8 @@ GATEWAY_PID=$!
 echo "Waiting 15s for gateway..."
 sleep 15
 
-# Step 5: Start HTTP Agent API server (on port 3001)
-echo "=== Starting Rector Agent HTTP API ==="
-cd /app/agent && node dist/api.js &
-API_PID=$!
-echo "Agent API PID: $API_PID"
-cd /
-
-# Wait for API server to be ready
-sleep 5
-node -e "require('http').get('http://localhost:3001/health', r => { console.log('Agent API is UP! status=' + r.statusCode); }).on('error', e => { console.log('WARNING: Agent API not responding:', e.message); });" 2>/dev/null || true
+# Start auto-resolution cron
+echo "Rector live. PID: $GATEWAY_PID"
 
 # Start auto-resolution cron
 echo "Rector live. PID: $GATEWAY_PID"
