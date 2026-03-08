@@ -91,6 +91,20 @@ export async function handleMessage(
         return handleCheck(parseInt(idStr));
     }
 
+    if (trimmed.startsWith("/wallet")) {
+        const address = trimmed.split(/\s+/)[1];
+        if (!address || !address.startsWith("0x") || address.length !== 42) {
+            return "❌ Please provide a valid BNB address:\nExample: /wallet 0x123...456";
+        }
+
+        await prisma.user.update({
+            where: { telegramId },
+            data: { walletAddress: address } as any,
+        });
+
+        return `✅ Wallet linked! Your predictions will now be attributed onchain to: \`${address}\``;
+    }
+
     if (trimmed === "/help" || trimmed === "/start") {
         return handleHelp();
     }
@@ -160,6 +174,10 @@ export async function executePredictionPipeline(
     disambiguation: DisambiguationResult
 ): Promise<string> {
     try {
+        // Find user to get walletAddress
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        const walletAddress = (user as any)?.walletAddress || "0x0000000000000000000000000000000000000000";
+
         // 1. Build runbook
         const tempId = Date.now();
         const runbook = await buildRunbook(disambiguation, tempId);
@@ -177,7 +195,7 @@ export async function executePredictionPipeline(
             disambiguation.disambiguated,
             runbookRef,
             resolutionTimestamp,
-            telegramId // using telegramId as submitter address placeholder
+            walletAddress // using real walletAddress as submitter
         );
 
         // 4. Save to database
