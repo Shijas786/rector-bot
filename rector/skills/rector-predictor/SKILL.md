@@ -84,8 +84,8 @@ Base URL: `https://api.binance.com`
 | "What's the high/low today?" | GET /api/v3/ticker/24hr?symbol=BNBUSDT |
 | "Volume today?" | GET /api/v3/ticker/24hr?symbol=BNBUSDT |
 | "Order book for BNB?" | GET /api/v3/depth?symbol=BNBUSDT&limit=10 |
-| "Analyse BNB" | exec: cd /app/agent && npx tsx src/scripts/analyse.ts BNB |
-| "I predict BNB hits $700" | exec: cd /app/agent && npx tsx src/scripts/predict.ts "..." |
+| "Analyse BNB" | exec: cd /app/agent && node dist/scripts/analyse.js BNB |
+| "I predict BNB hits $700" | exec: cd /app/agent && node dist/scripts/predict.js "..." |
 | "What's my balance?" | /mywallet |
 | "How do I withdraw?" | /withdraw <address> |
 | "Check prediction #id" | /check <id> |
@@ -102,12 +102,12 @@ When using exec, ALWAYS specify:
 
 ### Run Analysis
 ```
-exec command: cd /app/agent && npx tsx src/scripts/analyse.ts <SYMBOL>
+exec command: cd /app/agent && node dist/scripts/analyse.js <SYMBOL>
 ```
 
 ### Record Prediction
 ```
-exec command: cd /app/agent && npx tsx src/scripts/predict.ts "<CLAIM>" "<TELEGRAM_ID>" "<USERNAME>"
+exec command: cd /app/agent && node dist/scripts/predict.js "<CLAIM>" "<TELEGRAM_ID>" "<USERNAME>"
 ```
 
 ---

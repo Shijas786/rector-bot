@@ -105,10 +105,10 @@ EOF
 # Fix permissions for doctor
 chmod 700 /root/.openclaw
 
-# Failsafe: Ensure agent dependencies are present
-if [ ! -d "/app/agent/node_modules" ]; then
-    echo "Failsafe: Installing agent dependencies..."
-    cd /app/agent && npm install && npx prisma generate
+# Failsafe: Ensure agent dependencies and build are present
+if [ ! -d "/app/agent/dist" ]; then
+    echo "Failsafe: Building agent..."
+    cd /app/agent && npm install && npx prisma generate && npm run build
     cd /
 fi
 
@@ -128,9 +128,9 @@ sleep 15
 
 # Step 5: Start auto-resolution cron
 echo "Rector live. PID: $GATEWAY_PID"
- (polls every hour for expired predictions)
+# (polls every hour for expired predictions)
 echo "=== Starting auto-resolution cron ==="
-cd /app/agent && npx tsx src/scripts/cron.ts &
+cd /app/agent && node dist/scripts/cron.js &
 CRON_PID=$!
 echo "Cron PID: $CRON_PID"
 cd /
@@ -138,7 +138,7 @@ cd /
 # Query gateway for registered tools via its API
 echo "=== QUERYING GATEWAY STATUS ==="
 curl -s -H "Authorization: Bearer ${OPENCLAW_GATEWAY_TOKEN}" \
-  http://127.0.0.1:18790/__openclaw__/api/status 2>/dev/null | \
+  http://127.0.0.1:18789/__openclaw__/api/status 2>/dev/null | \
   node -e "
     let d=''; process.stdin.on('data',c=>d+=c).on('end',()=>{
       try{const j=JSON.parse(d); console.log(JSON.stringify(j,null,2));}
