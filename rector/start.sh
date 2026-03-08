@@ -5,7 +5,7 @@ export WORKSPACE_DIR="/root/.openclaw/workspace"
 mkdir -p "$WORKSPACE_DIR"
 
 
-# Step 1: Seed the workspace with the real SOUL.md and AGENTS.md
+# Step 1: Seed the workspace with ALL custom files
 cp /app/rector/SOUL.md "$WORKSPACE_DIR/SOUL.md"
 
 cat > "$WORKSPACE_DIR/AGENTS.md" << 'EOF'
@@ -13,6 +13,44 @@ cat > "$WORKSPACE_DIR/AGENTS.md" << 'EOF'
 When a user wants to make a prediction, use the `exec` tool to run the predict script in /app/agent.
 When a user asks for analysis of a token, use the `exec` tool to run the analyse script in /app/agent.
 Refer to the rector-predictor skill for exact commands.
+EOF
+
+# Override TOOLS.md — this is critical, it tells the LLM what tools are available
+cat > "$WORKSPACE_DIR/TOOLS.md" << 'EOF'
+# Available Tools
+
+You have the following tools available. USE THEM — do not give generic text responses.
+
+## exec
+Run shell commands on the server. Use this for token analysis and predictions.
+- Parameter: `command` (string) — the shell command to run.
+- Example: `exec` with command `cd /app/agent && npx tsx src/scripts/analyse.ts BNB`
+
+## web_fetch
+Fetch content from any URL. Use this for live price data.
+- Parameter: `url` (string) — the URL to fetch.
+- Example: `web_fetch` with url `https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT`
+
+## CRITICAL RULES
+- When asked about crypto prices, you MUST use `web_fetch` on the Binance API.
+- When asked for token analysis, you MUST use `exec` to run the analyse script.
+- When a user makes a prediction, you MUST use `exec` to run the predict script.
+- NEVER say "I can't access real-time data". You CAN — use the tools above.
+- NEVER give generic advice. Always fetch real data first.
+EOF
+
+# Override IDENTITY.md
+cat > "$WORKSPACE_DIR/IDENTITY.md" << 'EOF'
+# Rector Oracle
+You are Rector, a crypto prediction oracle on BNB Smart Chain.
+You have access to exec and web_fetch tools. Always use them.
+EOF
+
+# Override BOOTSTRAP.md
+cat > "$WORKSPACE_DIR/BOOTSTRAP.md" << 'EOF'
+# Bootstrap
+Load and follow the rector-predictor skill in skills/rector-predictor/SKILL.md.
+Always use exec and web_fetch tools to fetch live data. Never guess.
 EOF
 
 # Copy skills into the workspace
