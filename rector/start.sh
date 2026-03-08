@@ -105,18 +105,7 @@ cat > "/root/.openclaw/openclaw.json" << 'EOF'
       "allowFrom": ["*"],
       "commands": {
         "native": "auto",
-        "nativeSkills": "auto",
-        "restart": true,
-        "ownerDisplay": "raw"
-      }
-    }
-  },
-  "mcpServers": {
-    "bnbchain-mcp": {
-      "command": "npx",
-      "args": ["-y", "@bnb-chain/mcp@latest"],
-      "env": {
-        "PRIVATE_KEY": "${BSC_PRIVATE_KEY}"
+        "nativeSkills": "auto"
       }
     }
   },
@@ -163,7 +152,7 @@ cd /
 
 # Wait for API server to be ready
 sleep 5
-curl -sf http://localhost:3001/health && echo "Agent API is UP!" || echo "WARNING: Agent API not responding"
+node -e "require('http').get('http://localhost:3001/health', r => { console.log('Agent API is UP! status=' + r.statusCode); }).on('error', e => { console.log('WARNING: Agent API not responding:', e.message); });" 2>/dev/null || true
 
 # Start auto-resolution cron
 echo "Rector live. PID: $GATEWAY_PID"

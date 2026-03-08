@@ -133,7 +133,7 @@ export async function handleMessage(
         const resolutionDate = extractResolutionDate(trimmed);
         const result = await disambiguatePrediction(trimmed, resolutionDate);
 
-        if (result.disambiguated && !result.error) {
+        if (result.disambiguated) {
             userState.set(telegramId, { lastDisambiguation: result, awaitingConfirmation: "predict" });
             return formatDisambiguation(result);
         }
