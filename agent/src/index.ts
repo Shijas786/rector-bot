@@ -171,7 +171,7 @@ export async function handleMessage(
     }
 
     if (trimmed === "/help" || trimmed === "/start") {
-        return handleHelp();
+        return handleHelp((user as any).shadowAddress);
     }
 
     // Natural language — try to detect intent
@@ -412,9 +412,13 @@ ${prediction.reasoning ? `\nReasoning: ${prediction.reasoning}` : ""}
 ${prediction.txHashSubmit ? `\n🔗 bscscan.com/tx/${prediction.txHashSubmit}` : ""}`;
 }
 
-function handleHelp(): string {
-    return `Hey! I'm Rector, your Binance trading assistant. I'm here to help you dominate the charts. 🚀
+function handleHelp(shadowAddress?: string): string {
+    const walletInfo = shadowAddress
+        ? `\n👤 **Your Shadow Wallet:** \`${shadowAddress}\`\n*(Automatically generated for you. Use /mywallet to see your balance)*\n`
+        : "";
 
+    return `Hey! I'm Rector, your Binance trading assistant. I'm here to help you dominate the charts. 🚀
+${walletInfo}
 I can:
 📊 **Analyse** any token
 🚨 **Alert** you on price moves
