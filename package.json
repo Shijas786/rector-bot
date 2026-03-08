@@ -8,5 +8,8 @@
     },
     "dependencies": {
         "openclaw": "^0.0.1"
+    },
+    "scripts": {
+        "postinstall": "cd agent && npm install && npx prisma generate"
     }
 }

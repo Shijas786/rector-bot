@@ -85,12 +85,8 @@ cat > "/root/.openclaw/openclaw.json" << 'EOF'
       "dmPolicy": "open",
       "allowFrom": ["*"],
       "commands": {
-        "start": "Start Rector Protocol",
-        "analyse": "Market Analysis",
-        "predict": "Verify Prediction",
-        "mywallet": "Shadow Wallet",
-        "withdraw": "Move Funds",
-        "check": "View Proof"
+        "native": true,
+        "nativeSkills": true
       }
     }
   },
@@ -103,6 +99,13 @@ cat > "/root/.openclaw/openclaw.json" << 'EOF'
   }
 }
 EOF
+
+# Failsafe: Ensure agent dependencies are present (Railway postinstall should handle this, but play safe)
+if [ ! -d "/app/agent/node_modules" ]; then
+    echo "Failsafe: Installing agent dependencies..."
+    cd /app/agent && npm install && npx prisma generate
+    cd /
+fi
 
 # Step 3: Doctor fix
 npx openclaw doctor --fix 2>&1 || true
