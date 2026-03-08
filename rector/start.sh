@@ -19,22 +19,25 @@ cat > "$WORKSPACE_DIR/TOOLS.md" << 'EOF'
 
 You have the following tools available. USE THEM — do not give generic text responses.
 
-## exec
-Run shell commands on the server. Use this for token analysis and predictions.
-- Parameter: `command` (string) — the shell command to run.
-- Example: `exec` with command `cd /app/agent && npx tsx src/scripts/analyse.ts BNB`
+## web_fetch (PRIMARY TOOL)
+Fetch content from any URL. Use this for EVERYTHING — prices AND predictions.
 
-## web_fetch
-Fetch content from any URL. Use this for live price data.
-- Parameter: `url` (string) — the URL to fetch.
-- Example: `web_fetch` with url `https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT`
+### For Crypto Prices:
+- `web_fetch` → `https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT`
+
+### For Token Analysis:
+- `web_fetch` → `http://localhost:3001/analyse/BNB?telegramId=<USER_ID>`
+
+### For Predictions:
+- `web_fetch` POST → `http://localhost:3001/predict`
+- Body: `{"telegramId": "<ID>", "username": "<NAME>", "claimText": "<CLAIM>"}`
 
 ## CRITICAL RULES
-- When asked about crypto prices, you MUST use `web_fetch` on the Binance API.
-- When asked for token analysis, you MUST use `exec` to run the analyse script.
-- When a user makes a prediction, you MUST use `exec` to run the predict script.
-- NEVER say "I can't access real-time data". You CAN — use the tools above.
-- NEVER give generic advice. Always fetch real data first.
+- NEVER use exec. ALWAYS use web_fetch.
+- When asked about crypto prices, use the Binance API via web_fetch.
+- When asked for analysis, call http://localhost:3001/analyse/<SYMBOL>?telegramId=<ID>
+- When a user makes a prediction, POST to http://localhost:3001/predict with the claim.
+- NEVER say "I can't access real-time data". You CAN — use web_fetch.
 EOF
 
 cat > "$WORKSPACE_DIR/IDENTITY.md" << 'EOF'
@@ -126,7 +129,18 @@ GATEWAY_PID=$!
 echo "Waiting 15s for gateway..."
 sleep 15
 
-# Step 5: Start auto-resolution cron
+# Step 5: Start HTTP Agent API server (on port 3001)
+echo "=== Starting Rector Agent HTTP API ==="
+cd /app/agent && node dist/api.js &
+API_PID=$!
+echo "Agent API PID: $API_PID"
+cd /
+
+# Wait for API server to be ready
+sleep 5
+curl -sf http://localhost:3001/health && echo "Agent API is UP!" || echo "WARNING: Agent API not responding"
+
+# Start auto-resolution cron
 echo "Rector live. PID: $GATEWAY_PID"
 # (polls every hour for expired predictions)
 echo "=== Starting auto-resolution cron ==="
