@@ -60,8 +60,7 @@ cat > "/root/.openclaw/openclaw.json" << 'EOF'
   "agents": {
     "defaults": {
       "model": { "primary": "openai/gpt-4o" },
-      "workspace": "/root/.openclaw/workspace",
-      "systemCommands": false
+      "workspace": "/root/.openclaw/workspace"
     }
   },
   "tools": {
@@ -85,14 +84,14 @@ cat > "/root/.openclaw/openclaw.json" << 'EOF'
       "botToken": "${TELEGRAM_BOT_TOKEN}",
       "dmPolicy": "open",
       "allowFrom": ["*"],
-      "commands": [
-        { "command": "start", "description": "Start Rector Protocol" },
-        { "command": "analyse", "description": "Market Analysis" },
-        { "command": "predict", "description": "Verify Prediction" },
-        { "command": "mywallet", "description": "Shadow Wallet" },
-        { "command": "withdraw", "description": "Move Funds" },
-        { "command": "check", "description": "View Proof" }
-      ]
+      "commands": {
+        "start": "Start Rector Protocol",
+        "analyse": "Market Analysis",
+        "predict": "Verify Prediction",
+        "mywallet": "Shadow Wallet",
+        "withdraw": "Move Funds",
+        "check": "View Proof"
+      }
     }
   },
   "gateway": {
@@ -116,7 +115,7 @@ echo "=== FINAL tools section ==="
 node -e "const c=require('/root/.openclaw/openclaw.json'); console.log(JSON.stringify(c.tools, null, 2));"
 
 # Step 4: Start gateway
-npx openclaw gateway --port 18790 &
+npx openclaw gateway run --port 18790 &
 GATEWAY_PID=$!
 socat TCP-LISTEN:18789,fork,reuseaddr TCP:127.0.0.1:18790 &
 
