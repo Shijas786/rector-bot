@@ -268,7 +268,13 @@ export function extractResolutionDate(text: string): string {
 
 async function main() {
     console.log("🤖 Rector starting...");
-    try { await mcpClient.connect(); } catch (e) { }
+    try {
+        await mcpClient.connect();
+        const tools = await mcpClient.listTools();
+        console.log("[MCP TOOLS]", JSON.stringify(tools, null, 2));
+    } catch (e) {
+        console.error("[MCP ERROR]", e);
+    }
     startWorker(async (tid, msg) => console.log(`[Notify] ${tid}: ${msg}`));
     console.log("🚀 Rector Protocol Active");
 }
