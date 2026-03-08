@@ -187,6 +187,8 @@ export async function executePredictionPipeline(
                 userId,
                 claimText: disambiguation.disambiguated,
                 disambiguated: disambiguation.disambiguated,
+                successCriteria: disambiguation.successCriteria,
+                primarySource: disambiguation.primarySource,
                 runbookRef,
                 resolutionDate: new Date(disambiguation.resolutionDate),
                 txHashSubmit: txHash,

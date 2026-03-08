@@ -25,6 +25,8 @@ model Prediction {
   user            User     @relation(fields: [userId], references: [id])
   claimText       String
   disambiguated   String?
+  successCriteria String?
+  primarySource   String?
   runbookRef      String?
   resolutionDate  DateTime
   status          PredictionStatus @default(PENDING)
