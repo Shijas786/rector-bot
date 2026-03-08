@@ -22,19 +22,16 @@ web_fetch: http://localhost:3001/analyse/BNB?telegramId=<USER_TELEGRAM_ID>
 ```
 → Returns full technical analysis with price, support, resistance, trend data.
 
-### Submit a Prediction
-POST to `/predict` with JSON body:
+### Submit a Prediction (ALWAYS use this for any bet/prediction)
+Use a GET request with query parameters — no POST body needed:
 ```
-web_fetch POST: http://localhost:3001/predict
-body: {"telegramId": "<ID>", "username": "<USERNAME>", "claimText": "<THE PREDICTION>"}
+web_fetch: http://localhost:3001/predict-get?telegramId=<TELEGRAM_ID>&username=<USERNAME>&claim=<URL_ENCODED_CLAIM>
 ```
-→ Returns the on-chain result with TX hash and prediction ID.
-
-### Handle Any Message (generic fallback)
+**Example:**
 ```
-web_fetch POST: http://localhost:3001/message
-body: {"telegramId": "<ID>", "username": "<USERNAME>", "text": "<MESSAGE_TEXT>"}
+web_fetch: http://localhost:3001/predict-get?telegramId=123456&username=alice&claim=BNB+will+hit+900+next+month
 ```
+→ Returns JSON with `message` containing the TX hash and prediction ID.
 
 ### Health Check
 ```
@@ -64,20 +61,19 @@ Base URL: `https://api.binance.com`
 
 ## How to Answer Common Questions
 
-| User asks | What to do |
-|-----------|-----------|
-| "BNB price" | GET https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT |
-| "How is BNB doing today?" | GET https://api.binance.com/api/v3/ticker/24hr?symbol=BNBUSDT |
-| "Analyse BNB" | web_fetch: http://localhost:3001/analyse/BNB?telegramId=<USER_ID> |
-| "I predict BNB hits $700" | POST http://localhost:3001/predict with JSON body |
-| "What's my balance?" | Tell user to use /mywallet |
-| "How do I withdraw?" | Tell user to use /withdraw <address> |
-| "Check prediction #id" | Tell user to use /check <id> |
+| User says | Your EXACT action |
+|-----------|-------------------|
+| "BNB price" or any price | web_fetch → `https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT` |
+| "Analyse BNB" | web_fetch → `http://localhost:3001/analyse/BNB?telegramId=<ID>` |
+| ANY prediction/bet/will hit | web_fetch → `http://localhost:3001/predict-get?telegramId=<ID>&username=<NAME>&claim=<ENCODED>` |
+| "/mywallet" or balance | Get user's wallet via analyse endpoint or tell them |
+| "/withdraw" | Explain withdraw command |
 
 ---
 
-## Rules
-- NEVER guess a price. Always call Binance API or the local agent API.
-- For predictions, ALWAYS call the agent API at localhost:3001 — do NOT try to use exec.
-- Be conversational. Give the data with a short insight, not just raw numbers.
-- You have /mywallet, /withdraw, /check commands available.
+## MANDATORY RULES — NEVER BREAK THESE
+1. **DO NOT** give a text response saying "I'm processing your prediction". **CALL THE API FIRST.**
+2. **DO NOT** say "I'll keep you updated" without first calling `web_fetch`.
+3. When ANY user says a prediction/bet/I think X will hit: immediately call `http://localhost:3001/predict-get?...` and report the result.
+4. The claim text in the URL should be URL-encoded (spaces → +, etc.)
+5. After the API returns, show the user the TX hash from the response.

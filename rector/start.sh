@@ -65,6 +65,12 @@ EOF
 mkdir -p "$WORKSPACE_DIR/skills"
 cp -r /app/rector/skills/* "$WORKSPACE_DIR/skills/"
 
+# Clear poisoned AI session so it starts fresh with updated SKILL.md
+echo "=== Clearing AI session history ==="
+rm -f /root/.openclaw/agents/main/sessions/sessions.json
+echo "Session cleared - AI will start fresh"
+
+
 # Install official BNB Chain skill from GitHub
 echo "=== Installing BNB Chain skill ==="
 mkdir -p "$WORKSPACE_DIR/skills/bnbchain-mcp-skill"

@@ -92,6 +92,44 @@ app.post("/predict", async (req, res) => {
     }
 });
 
+// 3b. GET-based predict (easier for AI to call via web_fetch without POST body)
+// Usage: /predict-get?telegramId=123&username=alice&claim=BNB+hits+900+next+month
+app.get("/predict-get", async (req, res) => {
+    try {
+        const { telegramId, username, claim } = req.query;
+
+        if (!telegramId || !claim) {
+            return res.status(400).json({ error: "Missing telegramId or claim query params" });
+        }
+
+        const claimText = String(claim);
+
+        // Ensure user exists WITH shadow wallet (critical for on-chain submission)
+        let user = await prisma.user.findUnique({ where: { telegramId: String(telegramId) } });
+        if (!user) {
+            const { ethers } = await import("ethers");
+            const wallet = ethers.Wallet.createRandom();
+            user = await prisma.user.create({
+                data: {
+                    telegramId: String(telegramId),
+                    username: String(username || "user"),
+                    shadowAddress: wallet.address,
+                    shadowPrivateKey: wallet.privateKey,
+                } as any,
+            });
+        }
+
+        const resolutionDate = extractResolutionDate(claimText);
+        const disambiguation = await (disambiguatePrediction as any)(claimText, resolutionDate);
+        const resultMessage = await executePredictionPipeline(user!.id, String(telegramId), disambiguation);
+
+        res.json({ message: resultMessage });
+    } catch (error: any) {
+        console.error("[API /predict-get] Error:", error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // 4. Full message handler (handles all commands)
 app.post("/message", async (req, res) => {
     try {
