@@ -52,22 +52,34 @@ app.post("/predict", async (req, res) => {
             return res.status(400).json({ error: "Missing required fields: telegramId, claimText" });
         }
 
-        // Ensure user exists
-        const user = await prisma.user.upsert({
-            where: { telegramId: String(telegramId) },
-            update: { username },
-            create: { telegramId: String(telegramId), username },
-        });
+        // Ensure user exists WITH shadow wallet (critical for on-chain submission)
+        let user = await prisma.user.findUnique({ where: { telegramId: String(telegramId) } });
+        if (!user) {
+            const { ethers } = await import("ethers");
+            const wallet = ethers.Wallet.createRandom();
+            user = await prisma.user.create({
+                data: {
+                    telegramId: String(telegramId),
+                    username,
+                    shadowAddress: wallet.address,
+                    shadowPrivateKey: wallet.privateKey,
+                } as any,
+            });
+            console.log(`[API] Created shadow wallet for ${username}: ${wallet.address}`);
+        } else if (username) {
+            user = await prisma.user.update({ where: { telegramId: String(telegramId) }, data: { username } }) as any;
+        }
 
         // Disambiguate
         const resolutionDate = extractResolutionDate(claimText);
         const disambiguation = await (disambiguatePrediction as any)(claimText, resolutionDate);
 
-        // Execute
-        const resultMessage = await executePredictionPipeline(user.id, String(telegramId), disambiguation);
+        // Execute on-chain pipeline
+        const resultMessage = await executePredictionPipeline(user!.id, String(telegramId), disambiguation);
 
         res.json({ message: resultMessage });
     } catch (error: any) {
+        console.error("[API /predict] Error:", error.message);
         res.status(500).json({ error: error.message });
     }
 });
