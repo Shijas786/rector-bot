@@ -8,11 +8,19 @@ import {
     disambiguatePrediction,
 } from "./index.js";
 import { prisma } from "./db/prisma.js";
+import { mcpClient } from "./mcp/client.js";
 
 const app = express();
 app.use(express.json());
 
 const PORT = process.env.AGENT_API_PORT || 3001;
+
+// Connect MCP client on startup
+mcpClient.connect().then(() => {
+    console.log("[API] MCP client connected");
+}).catch((err: Error) => {
+    console.error("[API] MCP client failed to connect:", err.message);
+});
 
 // Health check
 app.get("/health", (_req, res) => {
