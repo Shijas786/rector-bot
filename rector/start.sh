@@ -118,6 +118,13 @@ sleep 20
 npx openclaw pairing approve telegram CYXPFK84 2>/dev/null || true
 echo "Rector live. PID: $GATEWAY_PID"
 
+# Start auto-resolution cron (polls every hour for expired predictions)
+echo "=== Starting auto-resolution cron ==="
+cd /app/agent && npx tsx src/scripts/cron.ts &
+CRON_PID=$!
+echo "Cron PID: $CRON_PID"
+cd /
+
 # Query gateway for registered tools via its API
 echo "=== QUERYING GATEWAY STATUS ==="
 curl -s -H "Authorization: Bearer ${OPENCLAW_GATEWAY_TOKEN}" \
