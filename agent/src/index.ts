@@ -34,7 +34,7 @@ export async function handleMessage(
 ): Promise<string> {
     // Ensure user exists in DB with a Shadow Wallet
     const existingUser = await prisma.user.findUnique({ where: { telegramId } });
-    let user;
+    let user: any;
 
     if (!existingUser) {
         const wallet = ethers.Wallet.createRandom();
@@ -65,66 +65,83 @@ export async function handleMessage(
             return result;
         } else {
             userState.set(telegramId, {});
-            return "Okay, cancelled. What would you like to do?\n\nType /help for all commands.";
+            return "Okay, cancelled. Type /help to see what I can do.";
         }
     }
 
-    // Route commands
     const trimmed = text.trim();
 
+    // 1. Explicit Commands
     if (trimmed.startsWith("/analyse") || trimmed.startsWith("/analyze")) {
         const symbol = trimmed.split(/\s+/)[1];
-        if (!symbol) return "Usage: /analyse [token]\nExample: /analyse BNB";
+        if (!symbol) return "Usage: /analyse [token]";
         return handleAnalyse(telegramId, symbol);
     }
 
     if (trimmed.startsWith("/predict")) {
         const claim = trimmed.replace("/predict", "").trim();
-        if (!claim) return "Usage: /predict [your prediction]\nExample: /predict BNB hits $1000 before Dec 2026";
+        if (!claim) return "Usage: /predict [your prediction]";
         return handlePredict(telegramId, claim);
     }
 
     if (trimmed.startsWith("/check")) {
         const idStr = trimmed.split(/\s+/)[1];
-        if (!idStr) return "Usage: /check [prediction_id]";
+        if (!idStr) return "Usage: /check [id]";
         return handleCheck(parseInt(idStr));
     }
 
     if (trimmed === "/mywallet") {
         const provider = new ethers.JsonRpcProvider(process.env.BSC_RPC_URL || "https://bsc-dataseed.binance.org");
-        const balance = await provider.getBalance((user as any).shadowAddress);
+        const balance = await provider.getBalance(user.shadowAddress);
         return `👤 **Your Rector Shadow Wallet**
         
-📍 **Address:** \`${(user as any).shadowAddress}\`
+📍 **Address:** \`${user.shadowAddress}\`
 💰 **Balance:** \`${ethers.formatEther(balance)} BNB\`
 
-🔗 [View on BscScan](https://testnet.bscscan.com/address/${(user as any).shadowAddress})`;
+🔗 [View on BscScan](https://testnet.bscscan.com/address/${user.shadowAddress})`;
     }
 
     if (trimmed.startsWith("/withdraw")) {
         const toAddress = trimmed.split(/\s+/)[1];
-        if (!toAddress || !toAddress.startsWith("0x") || toAddress.length !== 42) {
-            return "❌ Usage: /withdraw [address]";
-        }
+        if (!toAddress || !toAddress.startsWith("0x") || toAddress.length !== 42) return "Usage: /withdraw [address]";
+
         const provider = new ethers.JsonRpcProvider(process.env.BSC_RPC_URL || "https://bsc-dataseed.binance.org");
-        const wallet = new ethers.Wallet((user as any).shadowPrivateKey, provider);
+        const wallet = new ethers.Wallet(user.shadowPrivateKey, provider);
         const balance = await provider.getBalance(wallet.address);
         const feeData = await provider.getFeeData();
         const gasPrice = feeData.gasPrice || ethers.parseUnits("5", "gwei");
         const gasLimit = 21000n;
         const totalGas = gasPrice * gasLimit;
 
-        if (balance <= totalGas) return `❌ Insufficient balance for gas.`;
+        if (balance <= totalGas) return "❌ Insufficient balance for gas.";
 
-        const tx = await wallet.sendTransaction({ to: toAddress, value: balance - totalGas, gasLimit, gasPrice });
-        return `✅ Withdrawal sent! 🔗 [BscScan](https://testnet.bscscan.com/tx/${tx.hash})`;
+        try {
+            const tx = await wallet.sendTransaction({ to: toAddress, value: balance - totalGas, gasLimit, gasPrice });
+            return `✅ Withdrawal sent! 🔗 [BscScan](https://testnet.bscscan.com/tx/${tx.hash})`;
+        } catch (e: any) {
+            return `❌ Failed: ${e.message}`;
+        }
     }
 
     if (trimmed === "/help" || trimmed === "/start") {
-        return handleHelp((user as any).shadowAddress);
+        return handleHelp(user.shadowAddress);
     }
 
-    return `I didn't understand that. Type /help to see how the Rector Protocol works.`;
+    // 2. Natural Language Fallback
+    // If user just types something, try to see if it's a prediction
+    try {
+        const resolutionDate = extractResolutionDate(trimmed);
+        const result = await disambiguatePrediction(trimmed, resolutionDate);
+
+        if (result.disambiguated && !result.error) {
+            userState.set(telegramId, { lastDisambiguation: result, awaitingConfirmation: "predict" });
+            return formatDisambiguation(result);
+        }
+    } catch (e) {
+        // Not a prediction, show welcome
+    }
+
+    return handleHelp(user.shadowAddress);
 }
 
 export async function handleAnalyse(telegramId: string, symbol: string): Promise<string> {
@@ -226,8 +243,8 @@ I transform claims into verifiable on-chain truths.
 **How It Works:**
 1️⃣ **Make a Claim**: You provide a prediction, I disambiguate it.
 2️⃣ **Generate a Runbook**: I build a roadmap for verification on Greenfield.
-3️⃣ **Verify**: My agent executes the runbook at the deadline (Binance/Chainlink/Polymarket).
-4️⃣ **Attest On-Chain**: I sign and attest the outcome on BNB Smart Chain.
+3️⃣ **Verify**: My agent executes the runbook (Binance/Chainlink/Polymarket).
+4️⃣ **Attest On-Chain**: I sign and attest the outcome on BSC.
 5️⃣ **Build on Me**: Use these attestations for conditional payments & more.
 
 **Commands:**
@@ -235,7 +252,9 @@ I transform claims into verifiable on-chain truths.
 /predict ... - Submit a claim
 /mywallet - Check shadow balance
 /withdraw [addr] - Move winnings
-/check [id] - View on-chain proof`;
+/check [id] - View on-chain proof
+
+*(Tip: You can also just type your prediction directly, like "BNB hits $700 tomorrow")*`;
 }
 
 export function extractResolutionDate(text: string): string {
