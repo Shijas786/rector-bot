@@ -76,7 +76,7 @@ cat > "/root/.openclaw/openclaw.json" << 'EOF'
       "ask": "off",
       "backgroundMs": 10000,
       "timeoutSec": 60,
-      "pathPrepend": ["/usr/local/bin", "/app/node_modules/.bin"]
+      "pathPrepend": ["/usr/local/bin", "/app/node_modules/.bin", "/app/agent/node_modules/.bin"]
     }
   },
   "channels": {
@@ -85,14 +85,16 @@ cat > "/root/.openclaw/openclaw.json" << 'EOF'
       "dmPolicy": "open",
       "allowFrom": ["*"],
       "commands": {
-        "native": true,
-        "nativeSkills": true
+        "native": "auto",
+        "nativeSkills": "auto",
+        "restart": true,
+        "ownerDisplay": "raw"
       }
     }
   },
   "gateway": {
     "mode": "local",
-    "port": 18790,
+    "port": 18789,
     "auth": {
       "token": "${OPENCLAW_GATEWAY_TOKEN}"
     }
@@ -100,7 +102,10 @@ cat > "/root/.openclaw/openclaw.json" << 'EOF'
 }
 EOF
 
-# Failsafe: Ensure agent dependencies are present (Railway postinstall should handle this, but play safe)
+# Fix permissions for doctor
+chmod 700 /root/.openclaw
+
+# Failsafe: Ensure agent dependencies are present
 if [ ! -d "/app/agent/node_modules" ]; then
     echo "Failsafe: Installing agent dependencies..."
     cd /app/agent && npm install && npx prisma generate
@@ -110,26 +115,20 @@ fi
 # Step 3: Doctor fix
 npx openclaw doctor --fix 2>&1 || true
 
-# Show what doctor changed
-echo "=== DIFF: our config vs doctor output ==="
-diff /root/.openclaw/openclaw.json.bak /root/.openclaw/openclaw.json 2>/dev/null || echo "No backup to diff"
-
-echo "=== FINAL tools section ==="
-node -e "const c=require('/root/.openclaw/openclaw.json'); console.log(JSON.stringify(c.tools, null, 2));"
+# Show final config for debugging
+echo "=== UPDATED CONFIG ==="
+cat /root/.openclaw/openclaw.json
 
 # Step 4: Start gateway
-npx openclaw gateway run --port 18790 &
+npx openclaw gateway run --port 18789 &
 GATEWAY_PID=$!
-socat TCP-LISTEN:18789,fork,reuseaddr TCP:127.0.0.1:18790 &
 
-echo "Waiting 20s for gateway..."
-sleep 20
+echo "Waiting 15s for gateway..."
+sleep 15
 
-# Step 5: Pairing
-npx openclaw pairing approve telegram CYXPFK84 2>/dev/null || true
+# Step 5: Start auto-resolution cron
 echo "Rector live. PID: $GATEWAY_PID"
-
-# Start auto-resolution cron (polls every hour for expired predictions)
+ (polls every hour for expired predictions)
 echo "=== Starting auto-resolution cron ==="
 cd /app/agent && npx tsx src/scripts/cron.ts &
 CRON_PID=$!
