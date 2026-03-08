@@ -13,16 +13,7 @@ import { scheduleResolution, startWorker } from "./scheduler/queue.js";
 import { ethers } from "ethers";
 
 /**
- * Rector Prediction Assistant — Entry Point
- *
- * This agent handles Telegram messages via Rector and routes them
- * to the appropriate pipeline:
- *   /analyse [token]   → Market analysis
- *   /predict [claim]    → Prediction submission
- *   /leaderboard        → Top predictors
- *   /mystats            → User's prediction history
- *   /check [id]         → Check prediction status
- *   /help               → All commands
+ * Rector: The AI-Agentic Oracle
  */
 
 // In-memory conversation state (per user)
@@ -46,7 +37,6 @@ export async function handleMessage(
     let user;
 
     if (!existingUser) {
-        // Generate a new Shadow Wallet
         const wallet = ethers.Wallet.createRandom();
         user = await prisma.user.create({
             data: {
@@ -94,97 +84,47 @@ export async function handleMessage(
         return handlePredict(telegramId, claim);
     }
 
-    if (trimmed === "/leaderboard") {
-        return handleLeaderboard();
-    }
-
-    if (trimmed === "/mystats") {
-        return handleMyStats(user.id, telegramId);
-    }
-
     if (trimmed.startsWith("/check")) {
         const idStr = trimmed.split(/\s+/)[1];
-        if (!idStr) return "Usage: /check [prediction_id]\nExample: /check 47";
+        if (!idStr) return "Usage: /check [prediction_id]";
         return handleCheck(parseInt(idStr));
     }
 
     if (trimmed === "/mywallet") {
         const provider = new ethers.JsonRpcProvider(process.env.BSC_RPC_URL || "https://bsc-dataseed.binance.org");
         const balance = await provider.getBalance((user as any).shadowAddress);
-        const formattedBalance = ethers.formatEther(balance);
-
         return `👤 **Your Rector Shadow Wallet**
         
 📍 **Address:** \`${(user as any).shadowAddress}\`
-💰 **Balance:** \`${formattedBalance} BNB\`
+💰 **Balance:** \`${ethers.formatEther(balance)} BNB\`
 
-🔗 [View on BscScan](https://testnet.bscscan.com/address/${(user as any).shadowAddress})
-
-*This wallet is linked to your Telegram account. Predictions are attributed to this address automatically.*`;
+🔗 [View on BscScan](https://testnet.bscscan.com/address/${(user as any).shadowAddress})`;
     }
 
     if (trimmed.startsWith("/withdraw")) {
         const toAddress = trimmed.split(/\s+/)[1];
         if (!toAddress || !toAddress.startsWith("0x") || toAddress.length !== 42) {
-            return "❌ Usage: /withdraw [address]\nExample: /withdraw 0x123...456";
+            return "❌ Usage: /withdraw [address]";
         }
-
         const provider = new ethers.JsonRpcProvider(process.env.BSC_RPC_URL || "https://bsc-dataseed.binance.org");
         const wallet = new ethers.Wallet((user as any).shadowPrivateKey, provider);
-
         const balance = await provider.getBalance(wallet.address);
-        const gasPrice = (await provider.getFeeData()).gasPrice || ethers.parseUnits("5", "gwei");
+        const feeData = await provider.getFeeData();
+        const gasPrice = feeData.gasPrice || ethers.parseUnits("5", "gwei");
         const gasLimit = 21000n;
         const totalGas = gasPrice * gasLimit;
 
-        if (balance <= totalGas) {
-            return `❌ Insufficient balance to pay for gas.\nBalance: ${ethers.formatEther(balance)} BNB`;
-        }
+        if (balance <= totalGas) return `❌ Insufficient balance for gas.`;
 
-        const amountToSend = balance - totalGas;
-
-        try {
-            const tx = await wallet.sendTransaction({
-                to: toAddress,
-                value: amountToSend,
-                gasLimit,
-                gasPrice
-            });
-            return `✅ Withdrawal successful!\n\nSent: \`${ethers.formatEther(amountToSend)} BNB\`\nTo: \`${toAddress}\`\n\n🔗 [View Transaction](https://testnet.bscscan.com/tx/${tx.hash})`;
-        } catch (error: any) {
-            return `❌ Withdrawal failed: ${error.message}`;
-        }
-    }
-
-    if (trimmed.startsWith("/wallet")) {
-        const address = trimmed.split(/\s+/)[1];
-        if (!address || !address.startsWith("0x") || address.length !== 42) {
-            return "❌ Please provide a valid BNB address:\nExample: /wallet 0x123...456";
-        }
-
-        await prisma.user.update({
-            where: { telegramId },
-            data: { walletAddress: address } as any,
-        });
-
-        return `✅ Wallet linked! Your predictions will now be attributed onchain to: \`${address}\``;
+        const tx = await wallet.sendTransaction({ to: toAddress, value: balance - totalGas, gasLimit, gasPrice });
+        return `✅ Withdrawal sent! 🔗 [BscScan](https://testnet.bscscan.com/tx/${tx.hash})`;
     }
 
     if (trimmed === "/help" || trimmed === "/start") {
         return handleHelp((user as any).shadowAddress);
     }
 
-    // Natural language — try to detect intent
-    return `I didn't understand that. Here are my commands:
-
-/analyse [token]     → AI market analysis
-/predict [claim]     → submit a prediction
-/leaderboard         → top predictors this month
-/mystats            → your prediction history
-/mywallet           → check your shadow wallet & balance
-/withdraw [addr]    → move funds to your real wallet
-/check [id]          → check prediction status
-/help               → all commands`;
+    return `I didn't understand that. Type /help to see how the Rector Protocol works.`;
 }
 
 export async function handleAnalyse(telegramId: string, symbol: string): Promise<string> {
@@ -197,75 +137,50 @@ export async function handleAnalyse(telegramId: string, symbol: string): Promise
         });
         return result.formattedMessage;
     } catch (error: any) {
-        return `❌ Could not analyse ${symbol.toUpperCase()}. Make sure it's a valid Binance pair.\n\nError: ${error.message}`;
+        return `❌ Could not analyse ${symbol.toUpperCase()}.`;
     }
 }
 
 export async function handlePredict(telegramId: string, claim: string): Promise<string> {
     try {
-        // Extract resolution date from claim or default to end of year
         const resolutionDate = extractResolutionDate(claim);
         const result = await disambiguatePrediction(claim, resolutionDate);
-
-        userState.set(telegramId, {
-            lastDisambiguation: result,
-            awaitingConfirmation: "predict",
-        });
-
+        userState.set(telegramId, { lastDisambiguation: result, awaitingConfirmation: "predict" });
         return formatDisambiguation(result);
     } catch (error: any) {
-        return `❌ Could not process prediction.\n\nError: ${error.message}`;
+        return `❌ Could not process prediction.`;
     }
 }
 
-async function handleConfirmation(
-    userId: string,
-    telegramId: string,
-    state: Record<string, unknown>
-): Promise<string> {
+async function handleConfirmation(userId: string, telegramId: string, state: any): Promise<string> {
     if (state.awaitingConfirmation === "predict" && state.lastDisambiguation) {
-        const disambiguation = state.lastDisambiguation as DisambiguationResult;
-        return executePredictionPipeline(userId, telegramId, disambiguation);
+        return executePredictionPipeline(userId, telegramId, state.lastDisambiguation);
     }
-
-    return "Nothing to confirm. Type /help for commands.";
+    return "Nothing to confirm.";
 }
 
-/**
- * Execute the full onchain prediction pipeline.
- * Exported for use by MCP server.
- */
 export async function executePredictionPipeline(
     userId: string,
     telegramId: string,
     disambiguation: DisambiguationResult
 ): Promise<string> {
     try {
-        // Find user to get walletAddress (Shadow Wallet takes priority)
         const user = await prisma.user.findUnique({ where: { id: userId } });
-        const walletAddress = (user as any)?.shadowAddress || (user as any)?.walletAddress || "0x0000000000000000000000000000000000000000";
+        const walletAddress = (user as any)?.shadowAddress || "0x0000000000000000000000000000000000000000";
 
-        // 1. Build runbook
         const tempId = Date.now();
         const runbook = await buildRunbook(disambiguation, tempId);
-
-        // 2. Upload runbook to Greenfield
         const runbookRef = await uploadRunbook(tempId, runbook);
-
-        // 3. Submit onchain
-        const resolutionTimestamp = Math.floor(
-            new Date(disambiguation.resolutionDate).getTime() / 1000
-        );
+        const resolutionTimestamp = Math.floor(new Date(disambiguation.resolutionDate).getTime() / 1000);
 
         const { txHash, predictionId } = await submitPrediction(
             disambiguation.disambiguated.substring(0, 200),
             disambiguation.disambiguated,
             runbookRef,
             resolutionTimestamp,
-            walletAddress // using real walletAddress as submitter
+            walletAddress
         );
 
-        // 4. Save to database
         await prisma.prediction.create({
             data: {
                 onchainId: predictionId,
@@ -280,237 +195,67 @@ export async function executePredictionPipeline(
             } as any,
         });
 
-        // 5. Schedule auto-resolution
-        await scheduleResolution(
-            predictionId,
-            new Date(disambiguation.resolutionDate),
-            disambiguation.disambiguated,
-            disambiguation.successCriteria
-        );
+        await scheduleResolution(predictionId, new Date(disambiguation.resolutionDate), disambiguation.disambiguated, disambiguation.successCriteria);
 
-        return `✦ Recording prediction onchain...
-
+        return `🛡 **Protocol Initiated**
+        
 ✓ Runbook stored on BNB Greenfield
 ✓ Prediction #${predictionId} live on BSC
-✓ Auto-resolves: ${disambiguation.resolutionDate}
-
-TX: bscscan.com/tx/${txHash}
-
-Your prediction:
-🔗 yoursite.xyz/predictions/${predictionId}
-
-Your profile:
-🔗 yoursite.xyz/@${telegramId}`;
+✓ TX: bscscan.com/tx/${txHash}`;
     } catch (error: any) {
-        return `❌ Failed to record prediction onchain.\n\nError: ${error.message}`;
+        return `❌ Error: ${error.message}`;
     }
-}
-
-export async function handleLeaderboard(): Promise<string> {
-    const users = await prisma.user.findMany({
-        include: {
-            predictions: {
-                where: { status: "RESOLVED" },
-            },
-        },
-    });
-
-    const leaderboard = users
-        .map((u) => ({
-            username: u.username || u.telegramId,
-            correct: u.predictions.filter((p) => p.outcome === true).length,
-            total: u.predictions.length,
-            accuracy: u.predictions.length > 0
-                ? (u.predictions.filter((p) => p.outcome === true).length / u.predictions.length) * 100
-                : 0,
-        }))
-        .filter((u) => u.total > 0)
-        .sort((a, b) => b.accuracy - a.accuracy)
-        .slice(0, 10);
-
-    if (leaderboard.length === 0) {
-        return "🏆 No predictions resolved yet.\n\nBe the first! /predict [your prediction]";
-    }
-
-    const medals = ["🔥", "⭐", "🎯", "", "", "", "", "", "", ""];
-    const rows = leaderboard
-        .map((u, i) => `#${i + 1}  @${u.username}  ${u.correct}/${u.total}  ${u.accuracy.toFixed(0)}% ${medals[i] || ""}`)
-        .join("\n");
-
-    return `🏆 TOP PREDICTORS
-
-Rank  Trader         Correct  Accuracy
-${rows}
-
-All verified onchain BSC ✅`;
-}
-
-export async function handleMyStats(userId: string, telegramId: string): Promise<string> {
-    const predictions = await prisma.prediction.findMany({
-        where: { userId },
-        orderBy: { createdAt: "desc" },
-        take: 10,
-    });
-
-    if (predictions.length === 0) {
-        return "📊 You have no predictions yet.\n\nGet started: /predict [your prediction]";
-    }
-
-    const resolved = predictions.filter((p) => p.status === "RESOLVED");
-    const correct = resolved.filter((p) => p.outcome === true).length;
-
-    const statusMap: Record<string, string> = {
-        PENDING: "⏳",
-        RESOLVED: "",
-        INCONCLUSIVE: "⚠️",
-        EXPIRED: "💀",
-    };
-
-    const rows = predictions
-        .map((p) => {
-            const emoji = p.status === "RESOLVED"
-                ? (p.outcome ? "✅" : "❌")
-                : statusMap[p.status];
-            return `${emoji} ${p.claimText.substring(0, 50)}`;
-        })
-        .join("\n");
-
-    return `📊 @${telegramId} Stats
-
-Predictions: ${predictions.length}
-Resolved: ${resolved.length}
-Correct: ${correct}
-Accuracy: ${resolved.length > 0 ? ((correct / resolved.length) * 100).toFixed(1) : 0}%
-
-Recent:
-${rows}`;
 }
 
 async function handleCheck(id: number): Promise<string> {
-    const prediction = await prisma.prediction.findFirst({
-        where: { onchainId: id },
-    });
-
-    if (!prediction) {
-        return `❌ Prediction #${id} not found.`;
-    }
-
-    const statusEmoji: Record<string, string> = {
-        PENDING: "⏳ PENDING",
-        RESOLVED: prediction.outcome ? "✅ TRUE" : "❌ FALSE",
-        INCONCLUSIVE: "⚠️ INCONCLUSIVE",
-        EXPIRED: "💀 EXPIRED",
-    };
-
-    return `PREDICTION #${id}
-
-Claim: ${prediction.claimText}
-Status: ${statusEmoji[prediction.status]}
-Submitted: ${prediction.createdAt.toISOString().split("T")[0]}
-Resolves: ${prediction.resolutionDate.toISOString().split("T")[0]}
-${prediction.reasoning ? `\nReasoning: ${prediction.reasoning}` : ""}
-${prediction.txHashSubmit ? `\n🔗 bscscan.com/tx/${prediction.txHashSubmit}` : ""}`;
+    const p = await prisma.prediction.findFirst({ where: { onchainId: id } });
+    if (!p) return `❌ Prediction #${id} not found.`;
+    const status = p.status === "RESOLVED" ? (p.outcome ? "✅ TRUE" : "❌ FALSE") : `⏳ ${p.status}`;
+    return `📜 **PREDICTION #${id}**\n\nClaim: ${p.claimText}\nStatus: ${status}\nResolves: ${p.resolutionDate.toISOString().split("T")[0]}\n🔗 [Proof](https://testnet.bscscan.com/tx/${p.txHashSubmit})`;
 }
 
 function handleHelp(shadowAddress?: string): string {
     const walletInfo = shadowAddress
-        ? `\n👤 **Your Shadow Wallet:** \`${shadowAddress}\`\n*(Automatically generated for you. Use /mywallet to see your balance)*\n`
+        ? `\n👤 **Your Shadow Wallet:** \`${shadowAddress}\`\n*(Auto-generated. Use /mywallet to see balance)*\n`
         : "";
 
-    return `Hey! I'm Rector, your Binance trading assistant. I'm here to help you dominate the charts. 🚀
+    return `🛡 **Rector: The AI-Agentic Oracle** 🚀
 ${walletInfo}
-I can:
-📊 **Analyse** any token
-🚨 **Alert** you on price moves
-🎯 **Verify** your predictions onchain
+I transform claims into verifiable on-chain truths.
 
-Try these commands:
-/analyse BNB     → get my take on BNB
-/predict BNB hits $1000 → record your call
-/mywallet        → see your shadow wallet & balance
-/withdraw [addr] → move winnings to MetaMask
-/leaderboard     → see who's winning
-/mystats         → check your accuracy
-/check [id]      → view prediction proof
+**How It Works:**
+1️⃣ **Make a Claim**: You provide a prediction, I disambiguate it.
+2️⃣ **Generate a Runbook**: I build a roadmap for verification on Greenfield.
+3️⃣ **Verify**: My agent executes the runbook at the deadline (Binance/Chainlink/Polymarket).
+4️⃣ **Attest On-Chain**: I sign and attest the outcome on BNB Smart Chain.
+5️⃣ **Build on Me**: Use these attestations for conditional payments & more.
 
-Ready to start? Just type \`/analyse BNB\``;
+**Commands:**
+/analyse BNB - Market analysis
+/predict ... - Submit a claim
+/mywallet - Check shadow balance
+/withdraw [addr] - Move winnings
+/check [id] - View on-chain proof`;
 }
 
 export function extractResolutionDate(text: string): string {
-    // Try to extract date patterns
-    const decMatch = text.match(/(?:dec|december)\s*(\d{4})/i);
-    if (decMatch) return `${decMatch[1]}-12-31T23:59:00Z`;
-
-    const monthYearMatch = text.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\s*(\d{4})/i);
-    if (monthYearMatch) {
-        const months: Record<string, string> = {
-            jan: "01", feb: "02", mar: "03", apr: "04",
-            may: "05", jun: "06", jul: "07", aug: "08",
-            sep: "09", oct: "10", nov: "11", dec: "12",
-        };
-        const month = months[monthYearMatch[1].toLowerCase().substring(0, 3)];
-        return `${monthYearMatch[2]}-${month}-28T23:59:00Z`;
+    const match = text.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\s*(\d{4})/i);
+    if (match) {
+        const months: Record<string, string> = { jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06", jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12" };
+        return `${match[2]}-${months[match[1].toLowerCase().substring(0, 3)]}-28T23:59:00Z`;
     }
-
-    const qMatch = text.match(/q(\d)\s*(\d{4})?/i);
-    if (qMatch) {
-        const year = qMatch[2] || "2026";
-        const endMonths: Record<string, string> = { "1": "03", "2": "06", "3": "09", "4": "12" };
-        return `${year}-${endMonths[qMatch[1]]}-28T23:59:00Z`;
-    }
-
-    // Default: end of current year
     return "2026-12-31T23:59:00Z";
 }
 
-/**
- * Main startup function.
- */
 async function main() {
-    console.log("🤖 Rector Prediction Assistant starting...\n");
-
-    // Connect MCP client
-    try {
-        await mcpClient.connect();
-        console.log("✅ MCP client connected");
-    } catch (error: any) {
-        console.warn("⚠️  MCP client not available (run in standalone mode):", error.message);
-    }
-
-    // Start resolution worker
-    const notifyUser = async (telegramId: string, message: string) => {
-        console.log(`[Notify] ${telegramId}: ${message}`);
-        // In production, this sends via Rector Telegram
-    };
-
-    startWorker(notifyUser);
-    console.log("✅ Resolution worker started");
-
-    console.log("\n🚀 Agent ready! Listening for Rector messages...\n");
-
-    // In production, Rector calls handleMessage() via its message handler.
-    // For development/testing, you can simulate with stdin:
-    if (process.env.NODE_ENV !== "production") {
-        const readline = await import("readline");
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout,
-        });
-
-        rl.on("line", async (line: string) => {
-            const response = await handleMessage("dev_user", "developer", line);
-            console.log("\n" + response + "\n");
-        });
-
-        console.log("📝 Dev mode — type commands here (e.g. /analyse BNB)\n");
-    }
+    console.log("🤖 Rector starting...");
+    try { await mcpClient.connect(); } catch (e) { }
+    startWorker(async (tid, msg) => console.log(`[Notify] ${tid}: ${msg}`));
+    console.log("🚀 Rector Protocol Active");
 }
 
 if (import.meta.url === `file://${process.argv[1]}` || process.env.NODE_ENV === "production") {
-    // In production or when run directly, we start the worker
-    // But for API imports, we might want to skip the stdin loop
+    main().catch(console.error);
 }
-
-main().catch(console.error);
 
 export { handleMessage as processMessage };
