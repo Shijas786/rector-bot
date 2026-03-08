@@ -53,9 +53,6 @@ EOF
 mkdir -p "$WORKSPACE_DIR/skills"
 cp -r /app/rector/skills/* "$WORKSPACE_DIR/skills/"
 
-echo "=== Skills ==="
-find "$WORKSPACE_DIR/skills" -name "SKILL.md"
-
 # Step 2: Write openclaw.json
 mkdir -p /root/.openclaw
 cat > "/root/.openclaw/openclaw.json" << 'EOF'
@@ -98,14 +95,11 @@ cat > "/root/.openclaw/openclaw.json" << 'EOF'
 EOF
 
 # Step 3: Doctor fix
-echo "=== Running doctor --fix ==="
 npx openclaw doctor --fix 2>&1 || true
 
 # Step 4: Start gateway
-echo "=== Starting Gateway ==="
 npx openclaw gateway --port 18790 &
 GATEWAY_PID=$!
-
 socat TCP-LISTEN:18789,fork,reuseaddr TCP:127.0.0.1:18790 &
 
 echo "Waiting 20s for gateway..."
@@ -113,18 +107,53 @@ sleep 20
 
 # Step 5: Pairing
 npx openclaw pairing approve telegram CYXPFK84 2>/dev/null || true
-
-# Step 6: Read gateway log with strings to strip binary/ANSI
-echo "=== Gateway log (via strings) ==="
-strings /tmp/openclaw/openclaw-*.log 2>/dev/null | tail -100 || echo "No log"
-
 echo "Rector live. PID: $GATEWAY_PID"
 
-# Step 7: Monitor - every 60s dump new log entries so we see tool calls
+# Step 6: Parse the JSONL log and dump ALL message content
+echo "=== FULL GATEWAY LOG (parsed) ==="
+node -e "
+const fs = require('fs');
+const files = fs.readdirSync('/tmp/openclaw/').filter(f => f.endsWith('.log'));
+files.forEach(f => {
+  const lines = fs.readFileSync('/tmp/openclaw/' + f, 'utf8').split('\n').filter(l => l.trim());
+  lines.forEach(l => {
+    try {
+      const j = JSON.parse(l);
+      // Extract the actual message from numbered keys
+      const msgs = [];
+      for (let i = 0; i < 10; i++) {
+        if (j[String(i)] !== undefined) msgs.push(String(j[String(i)]).trim());
+      }
+      const msg = msgs.filter(m => m).join(' | ');
+      if (msg) console.log('[' + (j._meta?.logLevelName || '?') + '] ' + msg);
+    } catch(e) {}
+  });
+});
+" 2>&1 | tail -100
+
+# Step 7: Monitor log for new entries every 30s  
 while true; do
-  sleep 60
-  echo "=== LOG UPDATE $(date) ==="
-  strings /tmp/openclaw/openclaw-*.log 2>/dev/null | grep -iE "(tool|exec|web_fetch|function|call|error|warn)" | tail -30
+  sleep 30
+  LOGFILE=$(ls -t /tmp/openclaw/openclaw-*.log 2>/dev/null | head -1)
+  if [ -n "$LOGFILE" ]; then
+    echo "=== LOG $(date) ==="
+    node -e "
+    const fs = require('fs');
+    const lines = fs.readFileSync('$LOGFILE', 'utf8').split('\n').filter(l => l.trim());
+    // Show last 30 entries
+    lines.slice(-30).forEach(l => {
+      try {
+        const j = JSON.parse(l);
+        const msgs = [];
+        for (let i = 0; i < 10; i++) {
+          if (j[String(i)] !== undefined) msgs.push(String(j[String(i)]).substring(0, 500));
+        }
+        const msg = msgs.filter(m => m.trim()).join(' | ');
+        if (msg) console.log('[' + (j._meta?.logLevelName || '?') + '] ' + msg);
+      } catch(e) {}
+    });
+    " 2>&1
+  fi
 done &
 
 wait $GATEWAY_PID
