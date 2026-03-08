@@ -76,6 +76,8 @@ cat > "/root/.openclaw/openclaw.json" << 'EOF'
     }
   },
   "tools": {
+    "profile": "full",
+    "allow": ["group:runtime", "group:web", "group:fs"],
     "web": {
       "fetch": { "enabled": true },
       "search": { "enabled": true }
