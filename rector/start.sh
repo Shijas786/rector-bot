@@ -4,7 +4,7 @@
 export WORKSPACE_DIR="/root/.openclaw/workspace"
 mkdir -p "$WORKSPACE_DIR"
 
-# Step 1: Seed the workspace with ALL custom files
+# Step 1: Seed workspace files
 cp /app/rector/SOUL.md "$WORKSPACE_DIR/SOUL.md"
 
 cat > "$WORKSPACE_DIR/AGENTS.md" << 'EOF'
@@ -14,7 +14,6 @@ When a user asks for analysis of a token, use the `exec` tool to run the analyse
 Refer to the rector-predictor skill for exact commands.
 EOF
 
-# Override TOOLS.md — this is critical, it tells the LLM what tools are available
 cat > "$WORKSPACE_DIR/TOOLS.md" << 'EOF'
 # Available Tools
 
@@ -38,28 +37,24 @@ Fetch content from any URL. Use this for live price data.
 - NEVER give generic advice. Always fetch real data first.
 EOF
 
-# Override IDENTITY.md
 cat > "$WORKSPACE_DIR/IDENTITY.md" << 'EOF'
 # Rector Oracle
 You are Rector, a crypto prediction oracle on BNB Smart Chain.
 You have access to exec and web_fetch tools. Always use them.
 EOF
 
-# Override BOOTSTRAP.md
 cat > "$WORKSPACE_DIR/BOOTSTRAP.md" << 'EOF'
 # Bootstrap
 Load and follow the rector-predictor skill in skills/rector-predictor/SKILL.md.
 Always use exec and web_fetch tools to fetch live data. Never guess.
 EOF
 
-# Copy skills into the workspace
+# Copy skills
 mkdir -p "$WORKSPACE_DIR/skills"
 cp -r /app/rector/skills/* "$WORKSPACE_DIR/skills/"
 
-echo "=== Workspace files ==="
-ls -la "$WORKSPACE_DIR"
 echo "=== Skills ==="
-find "$WORKSPACE_DIR/skills" -name "SKILL.md" 2>/dev/null
+find "$WORKSPACE_DIR/skills" -name "SKILL.md"
 
 # Step 2: Write openclaw.json
 mkdir -p /root/.openclaw
@@ -102,37 +97,34 @@ cat > "/root/.openclaw/openclaw.json" << 'EOF'
 }
 EOF
 
-# Step 3: Run doctor --fix FIRST so it doesn't overwrite our config during gateway start
-echo "=== Running openclaw doctor --fix ==="
-npx openclaw doctor --fix 2>&1 || echo "Doctor exited with code $?"
+# Step 3: Doctor fix
+echo "=== Running doctor --fix ==="
+npx openclaw doctor --fix 2>&1 || true
 
-# Dump the FINAL config after doctor to see what it actually looks like
-echo "=== FINAL openclaw.json (after doctor) ==="
-cat /root/.openclaw/openclaw.json
-
-# Step 4: Start openclaw gateway
-echo "=== Starting OpenClaw Gateway ==="
+# Step 4: Start gateway
+echo "=== Starting Gateway ==="
 npx openclaw gateway --port 18790 &
 GATEWAY_PID=$!
 
-echo "Starting socat port forwarder (0.0.0.0:18789 -> 127.0.0.1:18790)..."
 socat TCP-LISTEN:18789,fork,reuseaddr TCP:127.0.0.1:18790 &
 
-# Wait for gateway to initialize
-echo "Waiting 20s for gateway to initialize..."
+echo "Waiting 20s for gateway..."
 sleep 20
 
-# Step 5: Auto-approve the Telegram pairing
-echo "Verifying Telegram pairing..."
-npx openclaw pairing approve telegram CYXPFK84 || echo "Pairing verification skipped"
+# Step 5: Pairing
+npx openclaw pairing approve telegram CYXPFK84 2>/dev/null || true
 
-# Step 6: Dump the gateway log to see tool registration
-echo "=== Gateway log (last 50 lines) ==="
-cat /tmp/openclaw/openclaw-*.log 2>/dev/null | tail -50 || echo "No gateway log found"
+# Step 6: Read gateway log with strings to strip binary/ANSI
+echo "=== Gateway log (via strings) ==="
+strings /tmp/openclaw/openclaw-*.log 2>/dev/null | tail -100 || echo "No log"
 
-echo "Rector is now monitoring for messages. Gateway PID: $GATEWAY_PID"
+echo "Rector live. PID: $GATEWAY_PID"
 
-# Step 7: Tail gateway log continuously so we can see tool calls in Railway logs
-tail -f /tmp/openclaw/openclaw-*.log 2>/dev/null &
+# Step 7: Monitor - every 60s dump new log entries so we see tool calls
+while true; do
+  sleep 60
+  echo "=== LOG UPDATE $(date) ==="
+  strings /tmp/openclaw/openclaw-*.log 2>/dev/null | grep -iE "(tool|exec|web_fetch|function|call|error|warn)" | tail -30
+done &
 
 wait $GATEWAY_PID
