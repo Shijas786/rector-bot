@@ -10,6 +10,7 @@ import { buildRunbook } from "./pipeline/buildRunbook.js";
 import { uploadRunbook } from "./mcp/greenfield.js";
 import { submitPrediction, getAccuracy, getPrediction } from "./mcp/bsc.js";
 import { scheduleResolution, startWorker } from "./scheduler/queue.js";
+import { ethers } from "ethers";
 
 /**
  * Rector Prediction Assistant — Entry Point
@@ -40,12 +41,28 @@ export async function handleMessage(
     username: string,
     text: string
 ): Promise<string> {
-    // Ensure user exists in DB
-    const user = await prisma.user.upsert({
-        where: { telegramId },
-        update: { username },
-        create: { telegramId, username },
-    });
+    // Ensure user exists in DB with a Shadow Wallet
+    const existingUser = await prisma.user.findUnique({ where: { telegramId } });
+    let user;
+
+    if (!existingUser) {
+        // Generate a new Shadow Wallet
+        const wallet = ethers.Wallet.createRandom();
+        user = await prisma.user.create({
+            data: {
+                telegramId,
+                username,
+                shadowAddress: wallet.address,
+                shadowPrivateKey: wallet.privateKey,
+            } as any,
+        });
+        console.log(`[Rector] Created shadow wallet for @${username}: ${wallet.address}`);
+    } else {
+        user = await prisma.user.update({
+            where: { telegramId },
+            data: { username },
+        });
+    }
 
     const state = userState.get(telegramId) || {};
 
@@ -91,6 +108,54 @@ export async function handleMessage(
         return handleCheck(parseInt(idStr));
     }
 
+    if (trimmed === "/mywallet") {
+        const provider = new ethers.JsonRpcProvider(process.env.BSC_RPC_URL || "https://bsc-dataseed.binance.org");
+        const balance = await provider.getBalance((user as any).shadowAddress);
+        const formattedBalance = ethers.formatEther(balance);
+
+        return `👤 **Your Rector Shadow Wallet**
+        
+📍 **Address:** \`${(user as any).shadowAddress}\`
+💰 **Balance:** \`${formattedBalance} BNB\`
+
+🔗 [View on BscScan](https://testnet.bscscan.com/address/${(user as any).shadowAddress})
+
+*This wallet is linked to your Telegram account. Predictions are attributed to this address automatically.*`;
+    }
+
+    if (trimmed.startsWith("/withdraw")) {
+        const toAddress = trimmed.split(/\s+/)[1];
+        if (!toAddress || !toAddress.startsWith("0x") || toAddress.length !== 42) {
+            return "❌ Usage: /withdraw [address]\nExample: /withdraw 0x123...456";
+        }
+
+        const provider = new ethers.JsonRpcProvider(process.env.BSC_RPC_URL || "https://bsc-dataseed.binance.org");
+        const wallet = new ethers.Wallet((user as any).shadowPrivateKey, provider);
+
+        const balance = await provider.getBalance(wallet.address);
+        const gasPrice = (await provider.getFeeData()).gasPrice || ethers.parseUnits("5", "gwei");
+        const gasLimit = 21000n;
+        const totalGas = gasPrice * gasLimit;
+
+        if (balance <= totalGas) {
+            return `❌ Insufficient balance to pay for gas.\nBalance: ${ethers.formatEther(balance)} BNB`;
+        }
+
+        const amountToSend = balance - totalGas;
+
+        try {
+            const tx = await wallet.sendTransaction({
+                to: toAddress,
+                value: amountToSend,
+                gasLimit,
+                gasPrice
+            });
+            return `✅ Withdrawal successful!\n\nSent: \`${ethers.formatEther(amountToSend)} BNB\`\nTo: \`${toAddress}\`\n\n🔗 [View Transaction](https://testnet.bscscan.com/tx/${tx.hash})`;
+        } catch (error: any) {
+            return `❌ Withdrawal failed: ${error.message}`;
+        }
+    }
+
     if (trimmed.startsWith("/wallet")) {
         const address = trimmed.split(/\s+/)[1];
         if (!address || !address.startsWith("0x") || address.length !== 42) {
@@ -116,6 +181,8 @@ export async function handleMessage(
 /predict [claim]     → submit a prediction
 /leaderboard         → top predictors this month
 /mystats            → your prediction history
+/mywallet           → check your shadow wallet & balance
+/withdraw [addr]    → move funds to your real wallet
 /check [id]          → check prediction status
 /help               → all commands`;
 }
@@ -174,9 +241,9 @@ export async function executePredictionPipeline(
     disambiguation: DisambiguationResult
 ): Promise<string> {
     try {
-        // Find user to get walletAddress
+        // Find user to get walletAddress (Shadow Wallet takes priority)
         const user = await prisma.user.findUnique({ where: { id: userId } });
-        const walletAddress = (user as any)?.walletAddress || "0x0000000000000000000000000000000000000000";
+        const walletAddress = (user as any)?.shadowAddress || (user as any)?.walletAddress || "0x0000000000000000000000000000000000000000";
 
         // 1. Build runbook
         const tempId = Date.now();
@@ -210,7 +277,7 @@ export async function executePredictionPipeline(
                 runbookRef,
                 resolutionDate: new Date(disambiguation.resolutionDate),
                 txHashSubmit: txHash,
-            },
+            } as any,
         });
 
         // 5. Schedule auto-resolution
@@ -356,6 +423,8 @@ I can:
 Try these commands:
 /analyse BNB     → get my take on BNB
 /predict BNB hits $1000 → record your call
+/mywallet        → see your shadow wallet & balance
+/withdraw [addr] → move winnings to MetaMask
 /leaderboard     → see who's winning
 /mystats         → check your accuracy
 /check [id]      → view prediction proof
