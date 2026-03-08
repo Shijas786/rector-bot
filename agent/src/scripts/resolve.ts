@@ -1,25 +1,32 @@
 #!/usr/bin/env tsx
 /**
- * Manual Prediction Resolver
- * 
+ * Manual Prediction Resolver — with on-chain attestation
+ *
  * Fetches pending predictions, checks Binance klines to see if the target
- * price was reached, and marks them WIN/LOSS in the DB.
- * 
+ * price was reached, marks them WIN/LOSS in DB, and calls resolveAndAttest()
+ * on the BSC smart contract so every resolution is verifiable on BSCScan.
+ *
  * Usage:
  *   npx tsx src/scripts/resolve.ts                    → resolve ALL pending
  *   npx tsx src/scripts/resolve.ts --id 42            → resolve specific prediction
  *   npx tsx src/scripts/resolve.ts --telegramId 123   → resolve for a user
+ *   npx tsx src/scripts/resolve.ts --dry-run          → check without writing
  */
 
 import "dotenv/config";
+import { ethers } from "ethers";
 import { prisma } from "../db/prisma.js";
+import { resolvePrediction as resolveOnChain, markInconclusive as markInconclusiveOnChain } from "../mcp/bsc.js";
 
 const args = process.argv.slice(2);
 const idArg = args.indexOf("--id");
 const telegramIdArg = args.indexOf("--telegramId");
+const isDryRun = args.includes("--dry-run");
 
 const specificId = idArg !== -1 ? parseInt(args[idArg + 1]) : null;
 const specificTelegramId = telegramIdArg !== -1 ? args[telegramIdArg + 1] : null;
+
+if (isDryRun) console.log("🔍 DRY RUN MODE — no writes\n");
 
 // ─── Binance klines fetch ────────────────────────────────────────────────────
 
@@ -41,28 +48,48 @@ async function getBinanceKlines(
     }));
 }
 
-// ─── Extract target price from claim text ──────────────────────────────────
+// ─── Extract target from claim text ─────────────────────────────────────────
 
-function extractTarget(claimText: string): { symbol: string; targetPrice: number | null; direction: "above" | "below" } {
-    // Extract target price: $900, 900$, 900 USD, hit 900
+function extractTarget(claimText: string): {
+    symbol: string;
+    targetPrice: number | null;
+    direction: "above" | "below";
+} {
     const priceMatch = claimText.match(/\$\s*([0-9,]+(?:\.[0-9]+)?)|([0-9,]+(?:\.[0-9]+)?)\s*(?:USD|\$|USDT)/i);
     const targetPrice = priceMatch
         ? parseFloat((priceMatch[1] || priceMatch[2]).replace(/,/g, ""))
         : null;
 
-    // Extract symbol (BNB, BTC, ETH, SOL, etc.)
-    const symbolMatch = claimText.match(/\b(BNB|BTC|ETH|SOL|XRP|ADA|MATIC|AVAX|DOT|LINK|UNI|DOGE|SHIB|PEPE|WLD)\b/i);
+    const symbolMatch = claimText.match(
+        /\b(BNB|BTC|ETH|SOL|XRP|ADA|MATIC|AVAX|DOT|LINK|UNI|DOGE|SHIB|PEPE|WLD)\b/i
+    );
     const symbol = symbolMatch ? symbolMatch[1].toUpperCase() + "USDT" : "BNBUSDT";
 
-    // Direction: "above" if "hit", "reach", "above", "over" — else "below"
-    const aboveKeywords = /\b(hit|reach|above|over|exceed|break|touch|past|surpass)\b/i;
-    const belowKeywords = /\b(below|under|drop|fall|dip)\b/i;
-    const direction = belowKeywords.test(claimText) && !aboveKeywords.test(claimText) ? "below" : "above";
+    const belowKeywords = /\b(below|under|drop|fall|dip|crash)\b/i;
+    const aboveKeywords = /\b(hit|reach|above|over|exceed|break|touch|past|surpass|pump)\b/i;
+    const direction =
+        belowKeywords.test(claimText) && !aboveKeywords.test(claimText) ? "below" : "above";
 
     return { symbol, targetPrice, direction };
 }
 
-// ─── Resolve a single prediction ───────────────────────────────────────────
+// ─── Build oracle signature ──────────────────────────────────────────────────
+
+async function signResolution(
+    predictionId: number,
+    outcome: boolean,
+    evidenceRef: string
+): Promise<string> {
+    if (!process.env.PRIVATE_KEY) return "0x";
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY);
+    const msgHash = ethers.solidityPackedKeccak256(
+        ["uint256", "bool", "string"],
+        [predictionId, outcome, evidenceRef]
+    );
+    return wallet.signMessage(ethers.getBytes(msgHash));
+}
+
+// ─── Resolve a single prediction ─────────────────────────────────────────────
 
 async function resolvePrediction(prediction: {
     id: number;
@@ -75,62 +102,86 @@ async function resolvePrediction(prediction: {
     const text = prediction.disambiguated || prediction.claimText;
     const { symbol, targetPrice, direction } = extractTarget(text);
 
+    // ── INCONCLUSIVE: no target price ──────────────────────────────────────────
     if (!targetPrice) {
-        await prisma.prediction.update({
-            where: { id: prediction.id },
-            data: { status: "INCONCLUSIVE", reasoning: "Could not extract target price from claim." },
-        });
-        return `⚠️  #${prediction.id} → INCONCLUSIVE (no target price found in: "${text.substring(0, 80)}")`;
+        const reasoning = "Could not extract target price from claim.";
+        if (!isDryRun) {
+            await prisma.prediction.update({
+                where: { id: prediction.id },
+                data: { status: "INCONCLUSIVE", reasoning },
+            });
+            // On-chain: markInconclusive (only if we have an onchainId)
+            if (prediction.onchainId) {
+                try {
+                    const { txHash } = await markInconclusiveOnChain(prediction.onchainId);
+                    await prisma.prediction.update({
+                        where: { id: prediction.id },
+                        data: { txHashResolve: txHash },
+                    });
+                    return `⚠️  #${prediction.id} → INCONCLUSIVE (no target price) | TX: bscscan.com/tx/${txHash}`;
+                } catch (e: any) {
+                    return `⚠️  #${prediction.id} → INCONCLUSIVE (no target price) | On-chain failed: ${e.message}`;
+                }
+            }
+        }
+        return `⚠️  #${prediction.id} → INCONCLUSIVE (no target price in: "${text.substring(0, 80)}")`;
     }
 
-    // Time range: from submission to resolution date (or now if past)
+    // ── Fetch klines ────────────────────────────────────────────────────────────
     const startMs = prediction.createdAt.getTime();
     const endMs = Math.min(prediction.resolutionDate.getTime(), Date.now());
 
     let outcome: boolean;
     let reasoning: string;
-    let evidenceRef: string | undefined;
+    let evidenceRef: string;
 
     try {
         const candles = await getBinanceKlines(symbol, startMs, endMs);
 
         if (candles.length === 0) {
-            await prisma.prediction.update({
-                where: { id: prediction.id },
-                data: { status: "INCONCLUSIVE", reasoning: `No ${symbol} price data found for the period.` },
-            });
-            return `⚠️  #${prediction.id} → INCONCLUSIVE (no data for ${symbol})`;
+            if (!isDryRun) {
+                await prisma.prediction.update({
+                    where: { id: prediction.id },
+                    data: { status: "INCONCLUSIVE", reasoning: `No ${symbol} data for period.` },
+                });
+            }
+            return `⚠️  #${prediction.id} → INCONCLUSIVE (no candle data for ${symbol})`;
         }
 
-        const allHighs = candles.map((c) => c.high);
-        const allLows = candles.map((c) => c.low);
-        const maxHigh = Math.max(...allHighs);
-        const minLow = Math.min(...allLows);
+        const maxHigh = Math.max(...candles.map((c) => c.high));
+        const minLow = Math.min(...candles.map((c) => c.low));
         const lastClose = candles[candles.length - 1].close;
 
         if (direction === "above") {
             outcome = maxHigh >= targetPrice;
             reasoning = outcome
-                ? `✅ ${symbol} hit a high of $${maxHigh.toFixed(2)}, exceeding target of $${targetPrice}`
-                : `❌ ${symbol} peaked at $${maxHigh.toFixed(2)}, never reached $${targetPrice} (last: $${lastClose.toFixed(2)})`;
+                ? `${symbol} hit $${maxHigh.toFixed(2)}, exceeding target of $${targetPrice}`
+                : `${symbol} peaked at $${maxHigh.toFixed(2)}, never reached $${targetPrice} (last: $${lastClose.toFixed(2)})`;
         } else {
             outcome = minLow <= targetPrice;
             reasoning = outcome
-                ? `✅ ${symbol} dropped to $${minLow.toFixed(2)}, reaching target of $${targetPrice}`
-                : `❌ ${symbol} lowest was $${minLow.toFixed(2)}, never reached $${targetPrice} (last: $${lastClose.toFixed(2)})`;
+                ? `${symbol} dropped to $${minLow.toFixed(2)}, reaching target of $${targetPrice}`
+                : `${symbol} lowest was $${minLow.toFixed(2)}, never reached $${targetPrice} (last: $${lastClose.toFixed(2)})`;
         }
 
-        evidenceRef = `binance_klines:${symbol}:${startMs}:${endMs}:high=${maxHigh}:low=${minLow}`;
+        evidenceRef = `binance:${symbol}:${startMs}:${endMs}:hi=${maxHigh.toFixed(2)}:lo=${minLow.toFixed(2)}`;
 
     } catch (e: any) {
-        await prisma.prediction.update({
-            where: { id: prediction.id },
-            data: { status: "INCONCLUSIVE", reasoning: `API error: ${e.message}` },
-        });
+        if (!isDryRun) {
+            await prisma.prediction.update({
+                where: { id: prediction.id },
+                data: { status: "INCONCLUSIVE", reasoning: `API error: ${e.message}` },
+            });
+        }
         return `⚠️  #${prediction.id} → INCONCLUSIVE (${e.message})`;
     }
 
-    // Update DB
+    if (isDryRun) {
+        const emoji = outcome ? "✅ WIN" : "❌ LOSS";
+        return `${emoji}  #${prediction.id} [DRY RUN] → ${reasoning}`;
+    }
+
+    // ── Update DB ───────────────────────────────────────────────────────────────
     await prisma.prediction.update({
         where: { id: prediction.id },
         data: {
@@ -142,22 +193,55 @@ async function resolvePrediction(prediction: {
         },
     });
 
+    // ── On-chain resolveAndAttest ────────────────────────────────────────────────
+    let txLine = "";
+    if (prediction.onchainId) {
+        try {
+            const signature = await signResolution(prediction.onchainId, outcome, evidenceRef);
+            const confidence = 90; // expressed as integer 0-100
+            const { txHash } = await resolveOnChain(
+                prediction.onchainId,
+                outcome,
+                confidence,
+                evidenceRef,
+                reasoning,
+                signature
+            );
+            await prisma.prediction.update({
+                where: { id: prediction.id },
+                data: { txHashResolve: txHash },
+            });
+            txLine = ` | ⛓ bscscan.com/tx/${txHash}`;
+        } catch (e: any) {
+            txLine = ` | ⚠️ On-chain failed: ${e.message}`;
+        }
+    } else {
+        txLine = " | (no onchainId — DB only)";
+    }
+
     const emoji = outcome ? "✅ WIN" : "❌ LOSS";
-    return `${emoji}  #${prediction.id} → ${reasoning}`;
+    return `${emoji}  #${prediction.id} → ${reasoning}${txLine}`;
 }
 
-// ─── Main ───────────────────────────────────────────────────────────────────
+// ─── Main ────────────────────────────────────────────────────────────────────
 
 async function main() {
     console.log("🔍 Rector Prediction Resolver\n");
 
-    let query: any = { where: { status: "PENDING" }, orderBy: { createdAt: "desc" }, take: 50 };
+    let query: any = {
+        where: { status: "PENDING" },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+    };
 
     if (specificId !== null) {
         query = { where: { id: specificId } };
     } else if (specificTelegramId) {
         const user = await prisma.user.findUnique({ where: { telegramId: specificTelegramId } });
-        if (!user) { console.log(`❌ User ${specificTelegramId} not found`); process.exit(1); }
+        if (!user) {
+            console.log(`❌ User ${specificTelegramId} not found`);
+            process.exit(1);
+        }
         query = { where: { userId: user.id, status: "PENDING" }, orderBy: { createdAt: "desc" } };
     }
 
@@ -179,4 +263,7 @@ async function main() {
     await prisma.$disconnect();
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+});
