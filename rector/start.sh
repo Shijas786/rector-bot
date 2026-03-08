@@ -9,10 +9,19 @@ cp /app/rector/SOUL.md "$WORKSPACE_DIR/SOUL.md"
 
 cat > "$WORKSPACE_DIR/AGENTS.md" << 'EOF'
 # Rector Core Logic
-When a user wants to make a prediction, use the `exec` tool to run the predict script in /app/agent.
-When a user asks for analysis of a token, use the `exec` tool to run the analyse script in /app/agent.
-Refer to the rector-predictor skill for exact commands.
+
+When a user makes a prediction:
+→ POST http://localhost:3001/predict with {telegramId, username, claimText}
+
+When a user asks for token analysis:
+→ GET http://localhost:3001/analyse/<SYMBOL>?telegramId=<ID>
+
+For BSC on-chain operations (balance, transfer, tx lookup):
+→ Use the bnbchain-mcp MCP tools (read the bnbchain-mcp-skill for details)
+
+Refer to the rector-predictor skill and bnbchain-mcp-skill for exact usage.
 EOF
+
 
 cat > "$WORKSPACE_DIR/TOOLS.md" << 'EOF'
 # Available Tools
@@ -52,9 +61,16 @@ Load and follow the rector-predictor skill in skills/rector-predictor/SKILL.md.
 Always use exec and web_fetch tools to fetch live data. Never guess.
 EOF
 
-# Copy skills
+# Copy local skills
 mkdir -p "$WORKSPACE_DIR/skills"
 cp -r /app/rector/skills/* "$WORKSPACE_DIR/skills/"
+
+# Install official BNB Chain skill from GitHub
+echo "=== Installing BNB Chain skill ==="
+mkdir -p "$WORKSPACE_DIR/skills/bnbchain-mcp-skill"
+curl -sf "https://raw.githubusercontent.com/bnb-chain/bnbchain-skills/main/skills/bnbchain-mcp-skill/SKILL.md" \
+  -o "$WORKSPACE_DIR/skills/bnbchain-mcp-skill/SKILL.md" 2>/dev/null && \
+  echo "BNB Chain skill installed" || echo "WARN: Failed to fetch BNB Chain skill"
 
 # Step 2: Write openclaw.json
 mkdir -p /root/.openclaw
@@ -92,6 +108,15 @@ cat > "/root/.openclaw/openclaw.json" << 'EOF'
         "nativeSkills": "auto",
         "restart": true,
         "ownerDisplay": "raw"
+      }
+    }
+  },
+  "mcpServers": {
+    "bnbchain-mcp": {
+      "command": "npx",
+      "args": ["-y", "@bnb-chain/mcp@latest"],
+      "env": {
+        "PRIVATE_KEY": "${BSC_PRIVATE_KEY}"
       }
     }
   },
