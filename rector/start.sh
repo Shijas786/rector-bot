@@ -4,7 +4,6 @@
 export WORKSPACE_DIR="/root/.openclaw/workspace"
 mkdir -p "$WORKSPACE_DIR"
 
-
 # Step 1: Seed the workspace with ALL custom files
 cp /app/rector/SOUL.md "$WORKSPACE_DIR/SOUL.md"
 
@@ -57,15 +56,12 @@ EOF
 mkdir -p "$WORKSPACE_DIR/skills"
 cp -r /app/rector/skills/* "$WORKSPACE_DIR/skills/"
 
-echo "Workspace initialized at $WORKSPACE_DIR"
+echo "=== Workspace files ==="
 ls -la "$WORKSPACE_DIR"
-echo "--- Skills directory ---"
-find "$WORKSPACE_DIR/skills" -type f 2>/dev/null || echo "No skills found!"
-echo "--- SOUL.md content ---"
-head -5 "$WORKSPACE_DIR/SOUL.md"
-echo "--- openclaw.json ---"
+echo "=== Skills ==="
+find "$WORKSPACE_DIR/skills" -name "SKILL.md" 2>/dev/null
 
-# Step 2: Write openclaw.json to the correct location
+# Step 2: Write openclaw.json
 mkdir -p /root/.openclaw
 cat > "/root/.openclaw/openclaw.json" << 'EOF'
 {
@@ -106,11 +102,16 @@ cat > "/root/.openclaw/openclaw.json" << 'EOF'
 }
 EOF
 
-echo "openclaw.json written to /root/.openclaw/openclaw.json"
+# Step 3: Run doctor --fix FIRST so it doesn't overwrite our config during gateway start
+echo "=== Running openclaw doctor --fix ==="
+npx openclaw doctor --fix 2>&1 || echo "Doctor exited with code $?"
+
+# Dump the FINAL config after doctor to see what it actually looks like
+echo "=== FINAL openclaw.json (after doctor) ==="
 cat /root/.openclaw/openclaw.json
 
-# Step 3: Start openclaw gateway on localhost:18790 and forward to 0.0.0.0:18789
-echo "Starting OpenClaw Gateway on localhost:18790..."
+# Step 4: Start openclaw gateway
+echo "=== Starting OpenClaw Gateway ==="
 npx openclaw gateway --port 18790 &
 GATEWAY_PID=$!
 
@@ -118,13 +119,20 @@ echo "Starting socat port forwarder (0.0.0.0:18789 -> 127.0.0.1:18790)..."
 socat TCP-LISTEN:18789,fork,reuseaddr TCP:127.0.0.1:18790 &
 
 # Wait for gateway to initialize
-echo "Waiting 15s for gateway to initialize..."
-sleep 15
+echo "Waiting 20s for gateway to initialize..."
+sleep 20
 
-# Step 4: Auto-approve the Telegram pairing
+# Step 5: Auto-approve the Telegram pairing
 echo "Verifying Telegram pairing..."
-npx openclaw pairing approve telegram CYXPFK84 || echo "Pairing verification skipped or failed"
+npx openclaw pairing approve telegram CYXPFK84 || echo "Pairing verification skipped"
 
-# Step 5: Keep the process alive by waiting on the gateway
+# Step 6: Dump the gateway log to see tool registration
+echo "=== Gateway log (last 50 lines) ==="
+cat /tmp/openclaw/openclaw-*.log 2>/dev/null | tail -50 || echo "No gateway log found"
+
 echo "Rector is now monitoring for messages. Gateway PID: $GATEWAY_PID"
+
+# Step 7: Tail gateway log continuously so we can see tool calls in Railway logs
+tail -f /tmp/openclaw/openclaw-*.log 2>/dev/null &
+
 wait $GATEWAY_PID
