@@ -86,12 +86,12 @@ cat > "/root/.openclaw/openclaw.json" << 'EOF'
       "dmPolicy": "open",
       "allowFrom": ["*"],
       "commands": [
+        { "command": "start", "description": "Start Rector Protocol" },
         { "command": "analyse", "description": "Market Analysis" },
         { "command": "predict", "description": "Verify Prediction" },
         { "command": "mywallet", "description": "Shadow Wallet" },
         { "command": "withdraw", "description": "Move Funds" },
-        { "command": "check", "description": "View Proof" },
-        { "command": "help", "description": "How it Works" }
+        { "command": "check", "description": "View Proof" }
       ]
     }
   },
