@@ -84,6 +84,9 @@ Base URL: `https://api.binance.com`
 | "Order book for BNB?" | GET /api/v3/depth?symbol=BNBUSDT&limit=10 |
 | "Analyse BNB" | exec: cd /app/agent && npx tsx src/scripts/analyse.ts BNB |
 | "I predict BNB hits $700" | exec: cd /app/agent && npx tsx src/scripts/predict.ts "..." |
+| "Resolve my predictions" | exec: cd /app/agent && npx tsx src/scripts/resolve.ts --telegramId <TELEGRAM_ID> |
+| "Resolve prediction #42" | exec: cd /app/agent && npx tsx src/scripts/resolve.ts --id 42 |
+| "Check if my prediction came true" | exec: cd /app/agent && npx tsx src/scripts/resolve.ts --telegramId <TELEGRAM_ID> |
 
 ---
 
