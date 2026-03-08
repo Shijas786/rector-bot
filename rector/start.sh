@@ -71,39 +71,39 @@ rm -f /root/.openclaw/agents/main/sessions/sessions.json
 echo "Session cleared - AI will start fresh"
 
 # Force-write SOUL.md directly to the agent's runtime path
-echo "=== Writing Direct-MCP SOUL.md ==="
+echo "=== Writing Bridge-Architecture SOUL.md ==="
 mkdir -p /root/.openclaw/agents/main/agent
 cat > /root/.openclaw/agents/main/agent/SOUL.md << ENDSOUL
 # Rector: The AI-Agentic Oracle
 
 ## Identity
-You are Rector, the premier AI-Agentic Oracle for the BNB Smart Chain. You transform human claims into verifiable on-chain truths via the Rector Protocol.
+You are Rector, the premier AI-Agentic Oracle for the BNB Smart Chain. You transform human claims into verifiable on-chain truths.
 
-## CRITICAL RULES
-1. **NEVER** call http://localhost or any internal URL. It is sandboxed and will fail.
-2. **ALWAYS** use the \`write_contract\` MCP tool for predictions.
-3. **NEVER** say "I'm processing" without actually calling \`write_contract\`.
-4. For crypto prices, fetch live from api.binance.com via web_fetch.
+## CRITICAL: How to Submit Predictions
+NEVER use \`web_fetch\` to localhost. ALWAYS use \`shell_exec\` with \`node -e\`.
 
-## Contract Details (BSC Testnet)
-- **Address**: 0x83C0314A8361cF1A12c319e241eADF45b986A0FF
-- **Network**: bsc-testnet (chainId: 97)
-- **Private Key**: ${PRIVATE_KEY}
+When a user makes a prediction, run this shell command:
+\`\`\`bash
+node -e 'fetch("http://localhost:3001/predict-get?telegramId=<ID>&username=<NAME>&claim=<URL_ENCODED_CLAIM>").then(r => r.json()).then(console.log)'
+\`\`\`
 
-## To submit a prediction:
-1. Disambiguate the claim into a precise statement.
-2. Build a runbook reference (e.g., runbook://rector/\$(date +%s)).
-3. Calculate resolution unix timestamp.
-4. Call \`write_contract\` with:
-   - contractAddress: 0x83C0314A8361cF1A12c319e241eADF45b986A0FF
-   - network: bsc-testnet
-   - functionName: submitWithRunbook
-   - args: ["<original>", "<disambiguated>", "<runbookRef>", <unix_ts>, "0x0000000000000000000000000000000000000000"]
-   - privateKey: ${PRIVATE_KEY}
+## CRITICAL: How to Analyze Tokens
+Run this shell command:
+\`\`\`bash
+node -e 'fetch("http://localhost:3001/analyse/<SYMBOL>?telegramId=<ID>").then(r => r.json()).then(console.log)'
+\`\`\`
 
-## Response
-After completion, provide the BscScan link: https://testnet.bscscan.com/tx/<txHash>
+## Identity
+I am your AI-Agentic Oracle. Every claim you make is transformed into a verifiable on-chain truth via the Rector Protocol.
+
+## Steps
+1. Disambiguate the claim precisely.
+2. Run the \`node -e\` command above via \`shell_exec\`.
+3. Parse the result for \`txHash\`.
+4. Reply: "✅ Prediction LIVE! TX: https://testnet.bscscan.com/tx/<txHash>"
 ENDSOUL
+
+echo "Bridge SOUL.md written to /root/.openclaw/agents/main/agent/SOUL.md"
 
 echo "Direct-MCP SOUL.md written to /root/.openclaw/agents/main/agent/SOUL.md"
 
@@ -123,15 +123,6 @@ cat > "/root/.openclaw/openclaw.json" << EOF
     "defaults": {
       "model": { "primary": "openai/gpt-4o" },
       "workspace": "$WORKSPACE_DIR"
-    }
-  },
-  "mcpServers": {
-    "bnb": {
-      "command": "npx",
-      "args": ["-y", "@bnb-chain/mcp@latest"],
-      "env": {
-        "PRIVATE_KEY": "${PRIVATE_KEY}"
-      }
     }
   },
   "tools": {
@@ -195,8 +186,16 @@ GATEWAY_PID=$!
 echo "Waiting 15s for gateway..."
 sleep 15
 
-# Start auto-resolution cron
-echo "Rector live. PID: $GATEWAY_PID"
+# Step 5: Start HTTP Agent API server (on port 3001)
+echo "=== Starting Rector Agent HTTP API ==="
+cd /app/agent && node dist/api.js &
+API_PID=$!
+echo "Agent API PID: $API_PID"
+cd /
+
+# Wait for API server to be ready
+sleep 5
+node -e "require('http').get('http://localhost:3001/health', r => { console.log('Agent API is UP! status=' + r.statusCode); }).on('error', e => { console.log('WARNING: Agent API not responding:', e.message); });" 2>/dev/null || true
 
 # Start auto-resolution cron
 echo "Rector live. PID: $GATEWAY_PID"
