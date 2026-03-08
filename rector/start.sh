@@ -60,7 +60,8 @@ cat > "/root/.openclaw/openclaw.json" << 'EOF'
   "agents": {
     "defaults": {
       "model": { "primary": "openai/gpt-4o" },
-      "workspace": "/root/.openclaw/workspace"
+      "workspace": "/root/.openclaw/workspace",
+      "systemCommands": false
     }
   },
   "tools": {
@@ -83,7 +84,15 @@ cat > "/root/.openclaw/openclaw.json" << 'EOF'
     "telegram": {
       "botToken": "${TELEGRAM_BOT_TOKEN}",
       "dmPolicy": "open",
-      "allowFrom": ["*"]
+      "allowFrom": ["*"],
+      "commands": [
+        { "command": "analyse", "description": "Market Analysis" },
+        { "command": "predict", "description": "Verify Prediction" },
+        { "command": "mywallet", "description": "Shadow Wallet" },
+        { "command": "withdraw", "description": "Move Funds" },
+        { "command": "check", "description": "View Proof" },
+        { "command": "help", "description": "How it Works" }
+      ]
     }
   },
   "gateway": {
