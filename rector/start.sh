@@ -71,10 +71,12 @@ cat > "/root/.openclaw/openclaw.json" << 'EOF'
       "search": { "enabled": true }
     },
     "exec": {
+      "host": "gateway",
       "security": "full",
       "ask": "off",
       "backgroundMs": 10000,
-      "timeoutSec": 60
+      "timeoutSec": 60,
+      "pathPrepend": ["/usr/local/bin", "/app/node_modules/.bin"]
     }
   },
   "channels": {
@@ -97,6 +99,13 @@ EOF
 # Step 3: Doctor fix
 npx openclaw doctor --fix 2>&1 || true
 
+# Show what doctor changed
+echo "=== DIFF: our config vs doctor output ==="
+diff /root/.openclaw/openclaw.json.bak /root/.openclaw/openclaw.json 2>/dev/null || echo "No backup to diff"
+
+echo "=== FINAL tools section ==="
+node -e "const c=require('/root/.openclaw/openclaw.json'); console.log(JSON.stringify(c.tools, null, 2));"
+
 # Step 4: Start gateway
 npx openclaw gateway --port 18790 &
 GATEWAY_PID=$!
@@ -108,6 +117,16 @@ sleep 20
 # Step 5: Pairing
 npx openclaw pairing approve telegram CYXPFK84 2>/dev/null || true
 echo "Rector live. PID: $GATEWAY_PID"
+
+# Query gateway for registered tools via its API
+echo "=== QUERYING GATEWAY STATUS ==="
+curl -s -H "Authorization: Bearer ${OPENCLAW_GATEWAY_TOKEN}" \
+  http://127.0.0.1:18790/__openclaw__/api/status 2>/dev/null | \
+  node -e "
+    let d=''; process.stdin.on('data',c=>d+=c).on('end',()=>{
+      try{const j=JSON.parse(d); console.log(JSON.stringify(j,null,2));}
+      catch(e){console.log('Raw:',d.substring(0,2000));}
+    });" || echo "Gateway API not available"
 
 # Step 6: Parse the JSONL log and dump ALL message content
 echo "=== FULL GATEWAY LOG (parsed) ==="
