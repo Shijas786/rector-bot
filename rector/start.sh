@@ -5,50 +5,20 @@ export WORKSPACE_DIR="/root/.openclaw/workspace"
 mkdir -p "$WORKSPACE_DIR"
 
 # Step 1: Seed workspace files
+# Force use our corrected SOUL.md everywhere
 cp /app/rector/SOUL.md "$WORKSPACE_DIR/SOUL.md"
 mkdir -p "$WORKSPACE_DIR/skills"
-cp -r /app/rector/skills/* "$WORKSPACE_DIR/skills/"
+cp -r /app/rector/skills/rector-predictor "$WORKSPACE_DIR/skills/"
 
 # Clear ALL agent state to avoid stale sessions/hallucinations
 echo "=== Clearing ALL AI Agent State ==="
 rm -rf /root/.openclaw/agents/main
 mkdir -p /root/.openclaw/agents/main/agent
+cp /app/rector/SOUL.md /root/.openclaw/agents/main/agent/SOUL.md
 echo "Agent state wiped - AI will start completely fresh"
 
-# Force-write SOUL.md directly to the agent's runtime path
-echo "=== Writing Bridge-Architecture SOUL.md ==="
-mkdir -p /root/.openclaw/agents/main/agent
-cat > /root/.openclaw/agents/main/agent/SOUL.md << ENDSOUL
-# Rector: The AI-Agentic Oracle
-
-## Identity
-You are Rector, the premier AI-Agentic Oracle for the BNB Smart Chain. You transform human claims into verifiable on-chain truths.
-
-## CRITICAL: How to Submit Predictions
-NEVER use \`web_fetch\` to localhost. ALWAYS use the \`exec\` tool with \`node -e\`.
-
-When a user makes a prediction, run this shell command:
-\`\`\`bash
-node -e 'fetch("http://localhost:3001/predict-get?telegramId=<ID>&username=<NAME>&claim=" + encodeURIComponent("<CLAIM>")).then(r => r.json()).then(j => console.log(JSON.stringify(j)))'
-\`\`\`
-
-## CRITICAL: How to Analyze Tokens
-Run this shell command:
-\`\`\`bash
-node -e 'fetch("http://localhost:3001/analyse/<SYMBOL>?telegramId=<ID>").then(r => r.json()).then(j => console.log(JSON.stringify(j)))'
-\`\`\`
-
-## Personality
-I am your AI-Agentic Oracle. Every claim you make is transformed into a verifiable on-chain truth via the Rector Protocol.
-
-## Steps
-1. Disambiguate the claim precisely (use technical symbols and dates).
-2. Run the \`node -e\` command above via the \`exec\` tool.
-3. Parse the result for \`txHash\`.
-4. Reply: "✅ Prediction LIVE! TX: https://testnet.bscscan.com/tx/<txHash>"
-ENDSOUL
-
-echo "Bridge SOUL.md written to /root/.openclaw/agents/main/agent/SOUL.md"
+# SOUL.md is already synced in Step 1
+echo "Rector SOUL.md architecture confirmed"
 
 
 # Skip installing conflicting Skills
