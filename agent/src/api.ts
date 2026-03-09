@@ -13,6 +13,12 @@ import { mcpClient } from "./mcp/client.js";
 const app = express();
 app.use(express.json());
 
+// Request logging middleware
+app.use((req, res, next) => {
+    console.log(`[API] ${req.method} ${req.url} - Body: ${JSON.stringify(req.body)} - Query: ${JSON.stringify(req.query)}`);
+    next();
+});
+
 const PORT = process.env.AGENT_API_PORT || 3001;
 
 // Connect MCP client on startup

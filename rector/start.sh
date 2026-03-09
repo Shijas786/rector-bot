@@ -9,10 +9,11 @@ cp /app/rector/SOUL.md "$WORKSPACE_DIR/SOUL.md"
 mkdir -p "$WORKSPACE_DIR/skills"
 cp -r /app/rector/skills/* "$WORKSPACE_DIR/skills/"
 
-# Clear poisoned AI session so it starts fresh
-echo "=== Clearing AI session history ==="
-rm -f /root/.openclaw/agents/main/sessions/sessions.json
-echo "Session cleared - AI will start fresh"
+# Clear ALL agent state to avoid stale sessions/hallucinations
+echo "=== Clearing ALL AI Agent State ==="
+rm -rf /root/.openclaw/agents/main
+mkdir -p /root/.openclaw/agents/main/agent
+echo "Agent state wiped - AI will start completely fresh"
 
 # Force-write SOUL.md directly to the agent's runtime path
 echo "=== Writing Bridge-Architecture SOUL.md ==="
@@ -50,12 +51,10 @@ ENDSOUL
 echo "Bridge SOUL.md written to /root/.openclaw/agents/main/agent/SOUL.md"
 
 
-# Install official BNB Chain skill from GitHub
-echo "=== Installing BNB Chain skill ==="
-mkdir -p "$WORKSPACE_DIR/skills/bnbchain-mcp-skill"
-curl -sf "https://raw.githubusercontent.com/bnb-chain/bnbchain-skills/main/skills/bnbchain-mcp-skill/SKILL.md" \
-  -o "$WORKSPACE_DIR/skills/bnbchain-mcp-skill/SKILL.md" 2>/dev/null && \
-  echo "BNB Chain skill installed" || echo "WARN: Failed to fetch BNB Chain skill"
+# Skip installing conflicting Skills
+echo "=== Skills Cleanup ==="
+rm -rf "$WORKSPACE_DIR/skills/bnbchain-mcp-skill"
+echo "Conflicting skills removed"
 
 # Step 2: Write openclaw.json
 mkdir -p /root/.openclaw
@@ -148,15 +147,13 @@ CRON_PID=$!
 echo "Cron PID: $CRON_PID"
 cd /
 
-# Query gateway for registered tools via its API
-echo "=== QUERYING GATEWAY STATUS ==="
-curl -s -H "Authorization: Bearer ${OPENCLAW_GATEWAY_TOKEN}" \
-  http://127.0.0.1:18789/__openclaw__/api/status 2>/dev/null | \
-  node -e "
-    let d=''; process.stdin.on('data',c=>d+=c).on('end',()=>{
-      try{const j=JSON.parse(d); console.log(JSON.stringify(j,null,2));}
-      catch(e){console.log('Raw:',d.substring(0,2000));}
-    });" || echo "Gateway API not available"
+# Step 6: Diagnostic Bridge Test
+echo "=== DIAGNOSTIC BRIDGE TEST ==="
+node -e "require('http').get('http://localhost:3001/health', r => { console.log('API Status: ' + r.statusCode); })" || echo "API unreachable"
+
+# Verify SOUL.md content
+echo "=== ACTIVE SOUL.md DUMP ==="
+cat /root/.openclaw/agents/main/agent/SOUL.md
 
 # Step 6: Parse the JSONL log and dump ALL message content
 echo "=== FULL GATEWAY LOG (parsed) ==="
