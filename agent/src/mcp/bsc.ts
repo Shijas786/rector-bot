@@ -54,7 +54,14 @@ export async function submitPrediction(
     });
 
     const parsedEvent = event ? contract.interface.parseLog(event) : null;
-    const predictionId = parsedEvent ? Number(parsedEvent.args.id) : 0;
+    let predictionId = parsedEvent ? Number(parsedEvent.args.id) : 0;
+
+    // Safety fallback: if predictionId is 0, it might be a parsing edge case
+    if (predictionId === 0) {
+        console.warn(`[BSC] Warning: Prediction ID parsed as 0. Tx: ${receipt.hash}`);
+        // Log all logs for debugging in Railway
+        console.log(`[BSC] Full Receipt Logs: ${JSON.stringify(receipt.logs)}`);
+    }
 
     console.log(`[BSC] Prediction #${predictionId} submitted: ${receipt.hash}`);
 
