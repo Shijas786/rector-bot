@@ -45,11 +45,11 @@ cat > "/root/.openclaw/openclaw.json" << EOF
     },
     "exec": {
       "host": "gateway",
-      "security": "full",
+      "security": "off",
       "ask": "off",
       "backgroundMs": 10000,
       "timeoutSec": 60,
-      "pathPrepend": ["/usr/local/bin", "/app/node_modules/.bin", "/app/agent/node_modules/.bin"]
+      "pathPrepend": ["/usr/local/bin", "/usr/bin", "/bin", "/app/node_modules/.bin"]
     }
   },
   "channels": {
@@ -118,8 +118,23 @@ echo "Cron PID: $CRON_PID"
 cd /
 
 # Step 6: Diagnostic Bridge Test
-echo "=== DIAGNOSTIC BRIDGE TEST ==="
-node -e "require('http').get('http://localhost:3001/health', r => { console.log('API Status: ' + r.statusCode); })" || echo "API unreachable"
+echo "=== 🚨 LOUD DIAGNOSTIC CHECK 🚨 ==="
+which node || echo "ERROR: node not found"
+node -v || echo "ERROR: node -v failed"
+which curl || echo "ERROR: curl not found"
+echo "--- Testing Bridge Connectivity ---"
+node -e "
+  const http = require('http');
+  const req = http.get('http://localhost:3001/health', res => {
+    console.log('✅ BRIDGE SUCCESS: API responded with ' + res.statusCode);
+    process.exit(0);
+  });
+  req.on('error', e => {
+    console.log('❌ BRIDGE FAILURE: ' + e.message);
+    process.exit(1);
+  });
+  setTimeout(() => { console.log('❌ BRIDGE TIMEOUT'); process.exit(1); }, 5000);
+" || echo "Diagnostic test failed"
 
 # Verify SOUL.md content
 echo "=== ACTIVE SOUL.md DUMP ==="
