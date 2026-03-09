@@ -45,7 +45,7 @@ cat > "/root/.openclaw/openclaw.json" << EOF
     },
     "exec": {
       "host": "gateway",
-      "security": "off",
+      "security": "full",
       "ask": "off",
       "backgroundMs": 10000,
       "timeoutSec": 60,
