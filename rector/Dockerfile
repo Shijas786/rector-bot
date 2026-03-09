@@ -2,8 +2,8 @@ FROM node:22-bookworm-slim
 
 WORKDIR /app
 
-# Install git, C++ build tools, and socat
-RUN apt-get update && apt-get install -y git python3 make g++ socat && rm -rf /var/lib/apt/lists/*
+# Install git, C++ build tools, socat, and curl
+RUN apt-get update && apt-get install -y git python3 make g++ socat curl && rm -rf /var/lib/apt/lists/*
 
 # Setup root workspace
 COPY package*.json ./

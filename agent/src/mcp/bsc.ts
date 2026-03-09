@@ -1,28 +1,30 @@
-import { mcpClient } from "./client.js";
+import { ethers } from "ethers";
 
 /**
- * BSC-specific MCP operations — read/write contracts on BNB Smart Chain.
+ * BSC-specific operations — read/write contracts on BNB Smart Chain via direct ethers.
  */
 
-const PREDICTION_REGISTRY = process.env.PREDICTION_REGISTRY_ADDRESS || "";
+const RPC_URL = process.env.NEXT_PUBLIC_BSC_RPC || "https://data-seed-prebsc-1-s1.binance.org:8545/";
+const PRIVATE_KEY = process.env.PRIVATE_KEY || "";
+const PREDICTION_REGISTRY = process.env.PREDICTION_REGISTRY_ADDRESS || "0x83C0314A8361cF1A12c319e241eADF45b986A0FF";
 
-import { Interface } from "ethers";
-
-const ABI_FRAGMENTS = [
+const ABI = [
     "function submitWithRunbook(string claimText, string disambiguated, string runbookRef, uint256 resolutionDate, address submitter) external returns (uint256)",
     "function resolveAndAttest(uint256 predictionId, bool outcome, uint8 confidence, string evidenceRef, string reasoning, bytes signature) external",
     "function getPrediction(uint256 predictionId) external view returns (uint256, address, string, string, string, uint256, uint8, bool, uint8, string, string)",
     "function getAccuracy(address user) external view returns (uint256 correct, uint256 total)",
     "function getByAddress(address user) external view returns (uint256[])",
     "function markInconclusive(uint256 predictionId) external",
-    "function latestAnswer() external view returns (int256)"
+    "function latestAnswer() external view returns (int256)",
+    "event PredictionSubmitted(uint256 indexed id, address indexed submitter, string claimText)"
 ];
 
-// Ethers.js automatically parses human-readable ABIs into the JSON object format required by MCP
-const PARSED_ABI = JSON.parse(new Interface(ABI_FRAGMENTS).formatJson());
+const provider = new ethers.JsonRpcProvider(RPC_URL);
+const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+const contract = new ethers.Contract(PREDICTION_REGISTRY, ABI, wallet);
 
 /**
- * Submit a prediction onchain via MCP write_contract.
+ * Submit a prediction onchain via direct ethers.
  */
 export async function submitPrediction(
     claimText: string,
@@ -31,23 +33,39 @@ export async function submitPrediction(
     resolutionDate: number,
     submitter: string
 ): Promise<{ txHash: string; predictionId: number }> {
-    const result = await mcpClient.callTool("write_contract", {
-        contractAddress: PREDICTION_REGISTRY,
-        abi: PARSED_ABI,
-        functionName: "submitWithRunbook",
-        args: [claimText, disambiguated, runbookRef, resolutionDate, submitter],
-        privateKey: process.env.PRIVATE_KEY,
-        network: "bsc-testnet",
-    }) as { transactionHash: string; events?: Array<{ args: string[] }> };
+    console.log(`[BSC] Submitting prediction: ${claimText}`);
+    const tx = await contract.submitWithRunbook(
+        claimText,
+        disambiguated,
+        runbookRef,
+        resolutionDate,
+        submitter
+    );
+    const receipt = await tx.wait();
+
+    // Find the PredictionSubmitted event
+    const event = receipt.logs.find((log: any) => {
+        try {
+            const parsed = contract.interface.parseLog(log);
+            return parsed?.name === "PredictionSubmitted";
+        } catch (e) {
+            return false;
+        }
+    });
+
+    const parsedEvent = event ? contract.interface.parseLog(event) : null;
+    const predictionId = parsedEvent ? Number(parsedEvent.args.id) : 0;
+
+    console.log(`[BSC] Prediction #${predictionId} submitted: ${receipt.hash}`);
 
     return {
-        txHash: result.transactionHash,
-        predictionId: parseInt(result.events?.[0]?.args?.[0] || "0"),
+        txHash: receipt.hash,
+        predictionId,
     };
 }
 
 /**
- * Resolve and attest a prediction onchain via MCP write_contract.
+ * Resolve and attest a prediction onchain via direct ethers.
  */
 export async function resolvePrediction(
     id: number,
@@ -57,92 +75,52 @@ export async function resolvePrediction(
     reasoning: string,
     signature: string
 ): Promise<{ txHash: string }> {
-    const result = await mcpClient.callTool("write_contract", {
-        contractAddress: PREDICTION_REGISTRY,
-        abi: PARSED_ABI,
-        functionName: "resolveAndAttest",
-        args: [id, outcome, confidence, evidenceRef, reasoning, signature],
-        privateKey: process.env.PRIVATE_KEY,
-        network: "bsc-testnet",
-    }) as { transactionHash: string };
-
-    return { txHash: result.transactionHash };
+    console.log(`[BSC] Resolving prediction #${id}: ${outcome}`);
+    const tx = await contract.resolveAndAttest(id, outcome, confidence, evidenceRef, reasoning, signature);
+    const receipt = await tx.wait();
+    return { txHash: receipt.hash };
 }
 
 /**
- * Mark a prediction as inconclusive via MCP write_contract.
+ * Mark a prediction as inconclusive via direct ethers.
  */
 export async function markInconclusive(id: number): Promise<{ txHash: string }> {
-    const result = await mcpClient.callTool("write_contract", {
-        contractAddress: PREDICTION_REGISTRY,
-        abi: PARSED_ABI,
-        functionName: "markInconclusive",
-        args: [id],
-        privateKey: process.env.PRIVATE_KEY,
-        network: "bsc-testnet",
-    }) as { transactionHash: string };
-
-    return { txHash: result.transactionHash };
+    const tx = await contract.markInconclusive(id);
+    const receipt = await tx.wait();
+    return { txHash: receipt.hash };
 }
 
 /**
- * Read a prediction from the contract via MCP read_contract.
+ * Read a prediction from the contract.
  */
 export async function getPrediction(id: number): Promise<unknown> {
-    return mcpClient.callTool("read_contract", {
-        contractAddress: PREDICTION_REGISTRY,
-        abi: PARSED_ABI,
-        functionName: "getPrediction",
-        args: [id],
-        network: "bsc-testnet",
-    });
+    return contract.getPrediction(id);
 }
 
 /**
- * Read accuracy stats for an address via MCP read_contract.
+ * Read accuracy stats for an address.
  */
 export async function getAccuracy(address: string): Promise<{ correct: number; total: number }> {
-    const result = await mcpClient.callTool("read_contract", {
-        contractAddress: PREDICTION_REGISTRY,
-        abi: PARSED_ABI,
-        functionName: "getAccuracy",
-        args: [address],
-        network: "bsc-testnet",
-    }) as [string, string];
-
+    const [correct, total] = await contract.getAccuracy(address);
     return {
-        correct: parseInt(result[0]),
-        total: parseInt(result[1]),
+        correct: Number(correct),
+        total: Number(total),
     };
 }
 
 /**
- * Get all prediction IDs for an address via MCP read_contract.
+ * Get all prediction IDs for an address.
  */
 export async function getByAddress(address: string): Promise<number[]> {
-    const result = await mcpClient.callTool("read_contract", {
-        contractAddress: PREDICTION_REGISTRY,
-        abi: PARSED_ABI,
-        functionName: "getByAddress",
-        args: [address],
-        network: "bsc-testnet",
-    }) as string[];
-
-    return result.map((id) => parseInt(id));
+    const ids = await contract.getByAddress(address);
+    return ids.map((id: any) => Number(id));
 }
 
 /**
- * Read Chainlink price feed on BSC via MCP read_contract.
+ * Read Chainlink price feed on BSC.
  */
 export async function readChainlinkPrice(feedAddress: string): Promise<number> {
-    const result = await mcpClient.callTool("read_contract", {
-        contractAddress: feedAddress,
-        abi: PARSED_ABI,
-        functionName: "latestAnswer",
-        args: [],
-        network: "bsc-testnet",
-    }) as string;
-
-    // Chainlink feeds return 8 decimal places
-    return parseInt(result) / 1e8;
+    const feed = new ethers.Contract(feedAddress, ["function latestAnswer() view returns (int256)"], provider);
+    const result = await feed.latestAnswer();
+    return Number(result) / 1e8;
 }
