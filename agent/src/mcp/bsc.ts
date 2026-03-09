@@ -11,12 +11,11 @@ const PREDICTION_REGISTRY = process.env.PREDICTION_REGISTRY_ADDRESS || "0x83C031
 const ABI = [
     "function submitWithRunbook(string claimText, string disambiguated, string runbookRef, uint256 resolutionDate, address submitter) external returns (uint256)",
     "function resolveAndAttest(uint256 predictionId, bool outcome, uint8 confidence, string evidenceRef, string reasoning, bytes signature) external",
-    "function getPrediction(uint256 predictionId) external view returns (uint256, address, string, string, string, uint256, uint8, bool, uint8, string, string)",
+    "function getPrediction(uint256 predictionId) external view returns (uint256, address, string, string, string, uint256, uint8, bool, uint8, string, string, bytes, uint256, uint256)",
     "function getAccuracy(address user) external view returns (uint256 correct, uint256 total)",
     "function getByAddress(address user) external view returns (uint256[])",
     "function markInconclusive(uint256 predictionId) external",
-    "function latestAnswer() external view returns (int256)",
-    "event PredictionSubmitted(uint256 indexed id, address indexed submitter, string claimText)"
+    "event PredictionSubmitted(uint256 indexed id, address indexed submitter, uint256 resolutionDate)"
 ];
 
 const provider = new ethers.JsonRpcProvider(RPC_URL);
