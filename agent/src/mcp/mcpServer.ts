@@ -7,7 +7,7 @@ import {
 import { prisma } from "../db/prisma.js";
 import { analyseToken } from "../pipeline/analyse.js";
 import { disambiguatePrediction } from "../pipeline/disambiguate.js";
-import { executePredictionPipeline } from "../index.js";
+import { executePredictionPipeline, extractResolutionDate } from "../index.js";
 
 const server = new Server(
     {
@@ -85,7 +85,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             });
 
             // 2. Disambiguate
-            const disambiguation = await disambiguatePrediction(claim, "2026-12-31T23:59:00Z");
+            const resolutionDate = extractResolutionDate(claim as string);
+            const disambiguation = await disambiguatePrediction(claim as string, resolutionDate);
 
             // 3. Execute pipeline (on-chain + DB)
             const resultMessage = await executePredictionPipeline(user.id, telegramId, disambiguation);

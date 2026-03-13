@@ -26,7 +26,8 @@ export async function scheduleResolution(
     predictionId: number,
     resolutionDate: Date,
     disambiguated: string,
-    successCriteria: string
+    successCriteria: string,
+    runbookRef: string
 ): Promise<void> {
     const delay = resolutionDate.getTime() - Date.now();
 
@@ -42,6 +43,7 @@ export async function scheduleResolution(
             disambiguated,
             successCriteria,
             resolutionDate: resolutionDate.toISOString(),
+            runbookRef,
         },
         {
             delay,
@@ -63,12 +65,13 @@ export function startWorker(
     const worker = new Worker(
         QUEUE_NAME,
         async (job: Job) => {
-            const { predictionId, disambiguated, successCriteria, resolutionDate } = job.data;
+            const { predictionId, disambiguated, successCriteria, resolutionDate, runbookRef } = job.data;
             console.log(`[Worker] Resolving prediction #${predictionId}...`);
 
             try {
                 // 1. Download the runbook from Greenfield
-                const runbook = await downloadRunbook(predictionId);
+                if (!runbookRef) throw new Error("No runbookRef provided in job data");
+                const runbook = await downloadRunbook(runbookRef);
 
                 // 2. Execute the runbook steps
                 const execution = await executeRunbook(runbook);

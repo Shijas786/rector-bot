@@ -86,7 +86,7 @@ app.post("/predict", async (req, res) => {
 
         // Disambiguate
         const resolutionDate = extractResolutionDate(claimText);
-        const disambiguation = await (disambiguatePrediction as any)(claimText, resolutionDate);
+        const disambiguation = await disambiguatePrediction(claimText, resolutionDate);
 
         // Execute on-chain pipeline
         const resultMessage = await executePredictionPipeline(user!.id, String(telegramId), disambiguation);
@@ -126,7 +126,7 @@ app.get("/predict-get", async (req, res) => {
         }
 
         const resolutionDate = extractResolutionDate(claimText);
-        const disambiguation = await (disambiguatePrediction as any)(claimText, resolutionDate);
+        const disambiguation = await disambiguatePrediction(claimText, resolutionDate);
         const resultMessage = await executePredictionPipeline(user!.id, String(telegramId), disambiguation);
 
         res.json({ message: resultMessage });

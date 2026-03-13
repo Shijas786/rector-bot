@@ -85,7 +85,7 @@ ${outcome.inconclusiveReason || "Sources conflicted"}
 Reasoning: ${outcome.reasoning}
 
 Onchain proof:
-🔗 bscscan.com/tx/${txHash}`;
+🔗 https://testnet.bscscan.com/tx/${txHash}`;
     }
 
     const statusEmoji = outcome.outcome ? "✅" : "❌";
@@ -103,7 +103,7 @@ Onchain proof:
       Reasoning: ${outcome.reasoning}
 
       Onchain proof:
-      🔗 bscscan.com/tx/${txHash}
+      🔗 https://testnet.bscscan.com/tx/${txHash}
 
       Your record: ${correct}/${total} correct 🎯`;
 }

@@ -23,12 +23,16 @@ export interface DisambiguationResult {
  */
 export async function disambiguatePrediction(
     rawText: string,
-    resolutionDate: string
+    resolutionDate: Date
 ): Promise<DisambiguationResult> {
+    const currentTime = new Date().toISOString();
+    const targetDate = resolutionDate.toISOString();
+
     const prompt = `You are an elite Agentic Verification Oracle on BNB Smart Chain via OpenClaw.
 
+Current Oracle Time: ${currentTime}
 User claim/prediction: "${rawText}"
-Target resolution date: ${resolutionDate}
+Initial target resolution date: ${targetDate}
 
 Your job is to rewrite this as a precise, mathematically and temporally verifiable statement.
 Extract: key entities, success criteria, and any ambiguities.
@@ -48,13 +52,13 @@ Return ONLY JSON:
   "primarySource": "binance_api|polymarket_api|chainlink_bsc|coingecko",
   "bscContract": "0x... or null",
   "ambiguities": [...],
-  "resolutionDate": "${resolutionDate}"
+  "resolutionDate": "ISO_8601_DATE_STRING"
 }`;
 
     const response = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [{ role: "user", content: prompt }],
-        temperature: 0.2,
+        temperature: 0.1,
         response_format: { type: "json_object" },
     });
 

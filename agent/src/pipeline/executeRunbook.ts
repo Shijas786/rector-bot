@@ -39,6 +39,8 @@ export async function executeRunbook(runbookMarkdown: string): Promise<RunbookEx
 
             if (step.type === "api_call" && step.source.includes("binance")) {
                 result = await executeBinanceStep(step);
+            } else if (step.type === "kline_check") {
+                result = await executeBinanceKlineStep(step);
             } else if (step.type === "bsc_read") {
                 result = await executeBscStep(step);
             } else if (step.type === "api_call" && step.source.includes("coingecko")) {
@@ -124,6 +126,38 @@ function parseRunbookSteps(markdown: string): ParsedStep[] {
     }
 
     return steps;
+}
+
+async function executeBinanceKlineStep(step: ParsedStep): Promise<StepResult> {
+    const res = await fetch(step.source);
+    const data = await res.json() as any[][];
+
+    if (!Array.isArray(data)) {
+        throw new Error("Invalid kline data returned from Binance");
+    }
+
+    // Candle format: [openTime, open, high, low, close, volume, closeTime, ...]
+    // We check high for >= targets and low for <= targets
+    let peakValue = 0;
+    const isDownside = step.successCondition?.includes("<");
+
+    if (isDownside) {
+        // Find minimum low
+        peakValue = Math.min(...data.map(c => parseFloat(c[3])));
+    } else {
+        // Find maximum high
+        peakValue = Math.max(...data.map(c => parseFloat(c[2])));
+    }
+
+    return {
+        stepId: step.id,
+        type: step.type,
+        source: step.source,
+        value: peakValue,
+        passed: evaluateSuccess(step.successCondition || "", peakValue),
+        finding: `${isDownside ? "Min Low" : "Max High"} was $${peakValue} in interval`,
+        error: null,
+    };
 }
 
 async function executeBinanceStep(step: ParsedStep): Promise<StepResult> {

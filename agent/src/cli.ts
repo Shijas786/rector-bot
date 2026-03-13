@@ -1,7 +1,7 @@
 import { prisma } from "./db/prisma.js";
 import { analyseToken } from "./pipeline/analyse.js";
 import { disambiguatePrediction } from "./pipeline/disambiguate.js";
-import { executePredictionPipeline } from "./index.js";
+import { executePredictionPipeline, extractResolutionDate } from "./index.js";
 
 /**
  * CLI Bridge for OpenClaw Skills
@@ -35,7 +35,8 @@ async function main() {
             });
 
             // 2. Disambiguate
-            const disambiguation = await disambiguatePrediction(claim, "2026-12-31T23:59:00Z");
+            const resolutionDate = extractResolutionDate(claim);
+            const disambiguation = await disambiguatePrediction(claim, resolutionDate);
 
             // 3. Execute pipeline
             const resultMessage = await executePredictionPipeline(user.id, String(telegramId), disambiguation);

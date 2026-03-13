@@ -11,6 +11,7 @@ import { uploadRunbook } from "./mcp/greenfield.js";
 import { submitPrediction, getAccuracy, getPrediction } from "./mcp/bsc.js";
 import { scheduleResolution, startWorker } from "./scheduler/queue.js";
 import { ethers } from "ethers";
+import * as chrono from "chrono-node";
 
 /**
  * Rector: The AI-Agentic Oracle
@@ -212,13 +213,19 @@ export async function executePredictionPipeline(
             } as any,
         });
 
-        await scheduleResolution(predictionId, new Date(disambiguation.resolutionDate), disambiguation.disambiguated, disambiguation.successCriteria);
+        await scheduleResolution(
+            predictionId,
+            new Date(disambiguation.resolutionDate),
+            disambiguation.disambiguated,
+            disambiguation.successCriteria || "",
+            runbookRef
+        );
 
         return `🛡 **Protocol Initiated**
         
 ✓ Runbook stored on BNB Greenfield
 ✓ Prediction #${predictionId} live on BSC
-✓ TX: bscscan.com/tx/${txHash}`;
+✓ TX: https://testnet.bscscan.com/tx/${txHash}`;
     } catch (error: any) {
         return `❌ Error: ${error.message}`;
     }
@@ -257,13 +264,14 @@ I transform claims into verifiable on-chain truths.
 *(Tip: You can also just type your prediction directly, like "BNB hits $700 tomorrow")*`;
 }
 
-export function extractResolutionDate(text: string): string {
-    const match = text.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\w*\s*(\d{4})/i);
-    if (match) {
-        const months: Record<string, string> = { jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06", jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12" };
-        return `${match[2]}-${months[match[1].toLowerCase().substring(0, 3)]}-28T23:59:00Z`;
-    }
-    return "2026-12-31T23:59:00Z";
+export function extractResolutionDate(text: string): Date {
+    const parsed = chrono.parseDate(text, new Date(), { forwardDate: true });
+    if (parsed) return parsed;
+
+    // Fallback: 1 year from now if totally unparseable
+    const defaultDate = new Date();
+    defaultDate.setFullYear(defaultDate.getFullYear() + 1);
+    return defaultDate;
 }
 
 async function main() {
@@ -275,7 +283,22 @@ async function main() {
     } catch (e) {
         console.error("[MCP ERROR]", e);
     }
-    startWorker(async (tid, msg) => console.log(`[Notify] ${tid}: ${msg}`));
+    
+    startWorker(async (tid, msg) => {
+        console.log(`[Notify] ${tid}: ${msg}`);
+        const token = process.env.OPENCLAW_TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
+        if (!token) return;
+        try {
+            await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ chat_id: tid, text: msg }),
+            });
+        } catch (e: any) {
+            console.error(`[Notify] Failed to send Telegram to ${tid}:`, e.message);
+        }
+    });
+
     console.log("🚀 Rector Protocol Active");
 }
 

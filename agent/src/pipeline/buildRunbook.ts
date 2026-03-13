@@ -23,70 +23,75 @@ export async function buildRunbook(
     disambiguation: DisambiguationResult,
     predictionId: number
 ): Promise<string> {
-    const prompt = `You are an onchain prediction verification assistant.
+    const startAt = new Date();
+    const startTimeIso = startAt.toISOString();
+    const startTimeMs = startAt.getTime();
+    const endTimeMs = new Date(disambiguation.resolutionDate).getTime();
+
+    const prompt = `You are an elite onchain prediction verification assistant.
 
 PREDICTION: "${disambiguation.disambiguated}"
 SUCCESS CRITERIA: "${disambiguation.successCriteria}"
-RESOLUTION DATE: "${disambiguation.resolutionDate}"
+START TIME: "${startTimeIso}" (${startTimeMs}ms)
+RESOLUTION DATE: "${disambiguation.resolutionDate}" (${endTimeMs}ms)
 PRIMARY SOURCE: ${disambiguation.primarySource}
 BSC CONTRACT: ${disambiguation.bscContract || "null"}
 
-Generate markdown runbook.
+Task: Generate a markdown verification runbook.
+
+CRITICAL: If the prediction is "at least once", "hits", or "reaches" a price (a range check), 
+you MUST include a Binance Kline check step to verify the high/low across the interval.
+
+Binance Kline URL Template:
+https://api.binance.com/api/v3/klines?symbol=BNBUSDT&interval=1m&startTime=${startTimeMs}&endTime=${endTimeMs}
+(Adjust symbol as needed)
+
 Priority: Binance API → Chainlink BSC → CoinGecko.
 Minimum 2 independent sources.
-Use real BSC contract addresses.
 
 Known Chainlink BSC feeds:
 ${Object.entries(CHAINLINK_FEEDS).map(([k, v]) => `- ${k}: ${v}`).join("\n")}
 
-Follow this exact format:
+Format:
 
 # Prediction Runbook
 
 ## Metadata
 - RunbookID: predict-{id}-{hash}
 - PredictionID: {id}
-- ResolveAt: {ISO8601}
+- StartAt: ${startTimeIso}
+- ResolveAt: ${disambiguation.resolutionDate}
 - Network: BNB Smart Chain (56)
-- StoredOn: BNB Greenfield
 
 ## Decision
 "{precise disambiguated claim}"
 
 ## Steps
 
-### Step 1 [PRIMARY] [BINANCE] weight:10
-- Type: api_call
-- Source: https://api.binance.com/api/v3/ticker/price?symbol=...
-- Extract: price
-- Success: parseFloat(price) >= ...
+### Step 1 [PRIMARY] [BINANCE_KLINES] weight:10
+- Type: kline_check
+- Source: https://api.binance.com/api/v3/klines?symbol=...&interval=1m&startTime={startTime_ms}&endTime={endTime_ms}
+- Extract: high
+- Success: max(high) >= ...
 
 ### Step 2 [BACKUP] [BSC_ONCHAIN] weight:9
 - Type: bsc_read
 - Contract: 0x...
 - Description: Chainlink .../USD Feed on BSC
 - Function: latestAnswer()
-- MCP Tool: read_contract
 - Success: value / 1e8 >= ...
 
 ### Step 3 [FALLBACK] weight:6
 - Type: api_call
-- Source: https://api.coingecko.com/api/v3/simple/price?ids=...&vs_currencies=usd
-- Extract: ...
-- Success: value >= ...
+- Source: https://api.binance.com/api/v3/ticker/price?symbol=...
+- Extract: price
+- Success: parseFloat(price) >= ...
 
 ## Outcome Logic
 STEP_1 OR STEP_2 (≥2 sources must agree)
 
-## Rules
-- Binance API is primary source.
-- Require ≥2 sources to agree for TRUE.
-- Never infer or estimate.
-- Return INCONCLUSIVE if sources conflict.
-- All timestamps must be on or before ResolveAt.
-
 Use prediction ID ${predictionId} in the RunbookID.
-Return ONLY the markdown runbook, nothing else.`;
+Return ONLY the markdown runbook.`;
 
     const response = await openai.chat.completions.create({
         model: "gpt-4o",

@@ -13,44 +13,16 @@
 
 import "dotenv/config";
 import { prisma } from "../db/prisma.js";
-import { resolvePrediction as resolveOnChain, markInconclusive as markInconclusiveOnChain } from "../mcp/bsc.js";
+import { resolvePrediction as resolveOnChain, markInconclusive as markInconclusiveOnChain, getAccuracy } from "../mcp/bsc.js";
+import { downloadRunbook } from "../mcp/greenfield.js";
+import { executeRunbook } from "../pipeline/executeRunbook.js";
+import { determineOutcome } from "../pipeline/determineOutcome.js";
+import { packageAndUploadEvidence } from "../pipeline/packageEvidence.js";
+import { mcpClient } from "../mcp/client.js";
 import { ethers } from "ethers";
 
 const POLL_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 const NOTIFY_QUEUE: { telegramId: string; message: string }[] = [];
-
-// ─── Minimal resolvers (inline, no file import to avoid circular deps) ────────
-
-async function fetchBinanceKlines(symbol: string, startMs: number, endMs: number) {
-    const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1h&startTime=${startMs}&endTime=${endMs}&limit=1000`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Binance ${res.status}`);
-    const data: any[] = await res.json();
-    return data.map((c) => ({ high: parseFloat(c[2]), low: parseFloat(c[3]), close: parseFloat(c[4]) }));
-}
-
-async function fetchPolymarket(query: string) {
-    const res = await fetch(`https://gamma-api.polymarket.com/markets?search=${encodeURIComponent(query)}&limit=3`);
-    if (!res.ok) return null;
-    const markets: any[] = await res.json();
-    return markets[0] || null;
-}
-
-function extractPriceTarget(text: string) {
-    const priceMatch = text.match(/\$\s*([0-9,]+(?:\.[0-9]+)?)/);
-    const targetPrice = priceMatch ? parseFloat(priceMatch[1].replace(/,/g, "")) : null;
-    const symbolMatch = text.match(/\b(BNB|BTC|ETH|SOL|XRP|ADA|MATIC|AVAX|DOT|LINK|UNI|DOGE|SHIB|ARB|OP)\b/i);
-    const symbol = symbolMatch ? symbolMatch[1].toUpperCase() + "USDT" : "BNBUSDT";
-    const direction = /\b(below|under|drop|fall|dip|crash)\b/i.test(text) ? "below" : "above";
-    return { symbol, targetPrice, direction };
-}
-
-async function signAttestation(id: number, outcome: boolean, evidenceRef: string) {
-    if (!process.env.PRIVATE_KEY) return "0x";
-    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY);
-    const hash = ethers.solidityPackedKeccak256(["uint256", "bool", "string"], [id, outcome, evidenceRef]);
-    return wallet.signMessage(ethers.getBytes(hash));
-}
 
 // ─── Main resolution logic ────────────────────────────────────────────────────
 
@@ -80,68 +52,128 @@ async function resolveExpiredPredictions(): Promise<void> {
         const endMs = p.resolutionDate.getTime();
 
         try {
-            let outcome: boolean;
-            let reasoning: string;
-            let evidenceRef: string;
-
-            if (source === "polymarket_api") {
-                const market = await fetchPolymarket((p as any).successCriteria || text.substring(0, 80));
-                if (!market || !market.resolved) {
-                    console.log(`[Cron] #${p.id} — Polymarket not yet resolved, skipping.`);
-                    continue;
-                }
-                outcome = market.outcome?.toLowerCase() === "yes";
-                reasoning = `Polymarket: "${market.question}" resolved ${market.outcome}`;
-                evidenceRef = `polymarket:${market.question.substring(0, 80)}:${market.outcome}`;
-            } else {
-                const { symbol, targetPrice, direction } = extractPriceTarget(text);
-                if (!targetPrice) {
-                    await prisma.prediction.update({ where: { id: p.id }, data: { status: "INCONCLUSIVE", reasoning: "No target price" } });
-                    if (p.onchainId) await markInconclusiveOnChain(p.onchainId).catch(() => { });
-                    continue;
-                }
-                const candles = await fetchBinanceKlines(symbol, startMs, endMs);
-                if (!candles.length) continue;
-                const maxHigh = Math.max(...candles.map((c) => c.high));
-                const minLow = Math.min(...candles.map((c) => c.low));
-                const last = candles[candles.length - 1].close;
-                outcome = direction === "above" ? maxHigh >= targetPrice : minLow <= targetPrice;
-                reasoning = direction === "above"
-                    ? outcome ? `${symbol} hit $${maxHigh.toFixed(2)} ≥ $${targetPrice}` : `${symbol} peaked at $${maxHigh.toFixed(2)}, missed $${targetPrice} (last $${last.toFixed(2)})`
-                    : outcome ? `${symbol} dropped to $${minLow.toFixed(2)} ≤ $${targetPrice}` : `${symbol} hit $${minLow.toFixed(2)}, missed $${targetPrice}`;
-                evidenceRef = `binance:${symbol}:hi=${maxHigh.toFixed(2)}:lo=${minLow.toFixed(2)}`;
+            if (!p.runbookRef) {
+                console.warn(`[Cron] #${p.id} has no runbookRef, skipping.`);
+                continue;
             }
 
-            // Update DB
+            // 1. Download runbook
+            const runbook = await downloadRunbook(p.runbookRef);
+
+            // 2. Execute verification steps
+            const execution = await executeRunbook(runbook);
+
+            // 3. Determine outcome via GPT-4o
+            const outcomeResult = await determineOutcome(
+                p.disambiguated || p.claimText,
+                p.successCriteria || "",
+                runbook,
+                execution.stepResults
+            );
+            
+            const { outcome, reasoning, confidence } = outcomeResult;
+
+            // 4. Package evidence
+            const { evidenceRef, signature } = await packageAndUploadEvidence(
+                p.onchainId || p.id,
+                p.disambiguated || p.claimText,
+                p.successCriteria || "",
+                p.resolutionDate.toISOString(),
+                execution.stepResults,
+                outcomeResult
+            );
+
+            // 5. Update Database
             await prisma.prediction.update({
                 where: { id: p.id },
-                data: { status: "RESOLVED", outcome, reasoning, evidenceRef, resolvedAt: new Date() },
+                data: {
+                    status: outcome === "INCONCLUSIVE" ? "INCONCLUSIVE" : "RESOLVED",
+                    outcome: outcome === "INCONCLUSIVE" ? null : (outcome as boolean),
+                    confidence,
+                    evidenceRef,
+                    reasoning: reasoning,
+                    resolvedAt: new Date(),
+                },
             });
 
-            // Attest on-chain
+            // 6. On-chain Resolution
             let txHash = "";
             if (p.onchainId) {
                 try {
-                    const sig = await signAttestation(p.onchainId, outcome, evidenceRef);
-                    const result = await resolveOnChain(p.onchainId, outcome, 90, evidenceRef, reasoning.substring(0, 280), sig);
-                    txHash = result.txHash;
+                    if (outcome === "INCONCLUSIVE") {
+                        const res = await markInconclusiveOnChain(p.onchainId);
+                        txHash = res.txHash;
+                    } else {
+                        const res = await resolveOnChain(
+                            p.onchainId,
+                            outcome as boolean,
+                            confidence,
+                            evidenceRef,
+                            reasoning.substring(0, 280),
+                            signature
+                        );
+                        txHash = res.txHash;
+                    }
                     await prisma.prediction.update({ where: { id: p.id }, data: { txHashResolve: txHash } });
                 } catch (e: any) {
                     console.warn(`[Cron] On-chain failed for #${p.id}: ${e.message}`);
                 }
             }
 
-            const emoji = outcome ? "✅ WIN" : "❌ LOSS";
-            console.log(`[Cron] ${emoji} #${p.id} → ${reasoning}${txHash ? ` | TX: ${txHash}` : ""}`);
+            // 7. Notification Formatting
+            let message = "";
+            if (outcome === "INCONCLUSIVE") {
+                message = `⚠️ PREDICTION #${p.id} — INCONCLUSIVE\n\n${outcomeResult.inconclusiveReason || "Sources conflicted"}\n\nReasoning: ${reasoning}\n\nOnchain proof: 🔗 https://testnet.bscscan.com/tx/${txHash}`;
+                console.log(`[Cron] ⚠️ #${p.id} → INCONCLUSIVE: ${reasoning}`);
+            } else {
+                const emoji = outcome ? "✅ WIN" : "❌ LOSS";
+                const acc = await getAccuracy(p.user.telegramId).catch(() => ({ correct: 0, total: 0 }));
+                message = `${emoji} PREDICTION #${p.id} — ${outcome ? "TRUE" : "FALSE"}\n\nConfidence: ${confidence}%\nReasoning: ${reasoning}\n\nOnchain proof: 🔗 https://testnet.bscscan.com/tx/${txHash}\nYour record: ${acc.correct}/${acc.total} correct 🎯`;
+                console.log(`[Cron] ${emoji} #${p.id} → ${reasoning}${txHash ? ` | TX: ${txHash}` : ""}`);
+            }
 
-            // Queue Telegram notification
             NOTIFY_QUEUE.push({
                 telegramId: p.user.telegramId,
-                message: `🔔 Prediction Update!\n\n${emoji} ${reasoning}\n\n${txHash ? `⛓ bscscan.com/tx/${txHash}` : ""}`,
+                message,
             });
 
         } catch (e: any) {
             console.error(`[Cron] Error resolving #${p.id}: ${e.message}`);
+        }
+    }
+
+    await processNotificationQueue();
+}
+
+async function processNotificationQueue() {
+    const token = process.env.OPENCLAW_TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
+    if (!token) {
+        console.warn("[Cron] No TELEGRAM_BOT_TOKEN found, skipping notifications");
+        NOTIFY_QUEUE.length = 0;
+        return;
+    }
+
+    while (NOTIFY_QUEUE.length > 0) {
+        const item = NOTIFY_QUEUE.shift();
+        if (!item) continue;
+        
+        try {
+            const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    chat_id: item.telegramId,
+                    text: item.message,
+                }),
+            });
+            if (!res.ok) {
+                const text = await res.text();
+                console.error(`[Cron] Failed to send Telegram: ${text}`);
+            } else {
+                console.log(`[Cron] Notification sent to ${item.telegramId}`);
+            }
+        } catch (e: any) {
+            console.error(`[Cron] Error sending notification to ${item.telegramId}: ${e.message}`);
         }
     }
 }
@@ -151,6 +183,13 @@ async function resolveExpiredPredictions(): Promise<void> {
 async function main() {
     console.log("⏰ Rector Auto-Resolution Cron started");
     console.log(`   Polling every ${POLL_INTERVAL_MS / 60000} minutes\n`);
+
+    try {
+        await mcpClient.connect();
+        console.log("[Cron] Connected to MCP server");
+    } catch (e) {
+        console.error("[Cron MCP ERROR]", e);
+    }
 
     // Run immediately on startup
     await resolveExpiredPredictions();

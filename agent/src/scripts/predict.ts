@@ -6,7 +6,7 @@
 import "dotenv/config";
 import { prisma } from "../db/prisma.js";
 import { disambiguatePrediction, formatDisambiguation } from "../pipeline/disambiguate.js";
-import { executePredictionPipeline } from "../index.js";
+import { executePredictionPipeline, extractResolutionDate } from "../index.js";
 
 const claim = process.argv[2];
 const telegramId = process.argv[3];
@@ -26,7 +26,8 @@ try {
     });
 
     // 2. Disambiguate
-    const disambiguation = await disambiguatePrediction(claim, "2026-12-31T23:59:00Z");
+    const resolutionDate = extractResolutionDate(claim);
+    const disambiguation = await disambiguatePrediction(claim, resolutionDate);
 
     // 3. Execute pipeline (on-chain + DB)
     const resultMessage = await executePredictionPipeline(user.id, telegramId, disambiguation);

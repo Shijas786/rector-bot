@@ -70,12 +70,20 @@ export async function uploadEvidence(
  * Download a runbook from BNB Greenfield.
  */
 export async function downloadRunbook(
-    predictionId: number
+    runbookRef: string
 ): Promise<string> {
-    const objectName = `predict-${predictionId}-runbook.md`;
+    // Expected format: gnfd://bucket-name/object-name.md
+    let bucketName = RUNBOOKS_BUCKET;
+    let objectName = runbookRef;
+    
+    if (runbookRef.startsWith("gnfd://")) {
+        const parts = runbookRef.replace("gnfd://", "").split("/");
+        bucketName = parts[0];
+        objectName = parts.slice(1).join("/");
+    }
 
     const result = await mcpClient.callTool("gnfd_download_object", {
-        bucketName: RUNBOOKS_BUCKET,
+        bucketName,
         objectName,
     }) as { body: string };
 
