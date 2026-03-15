@@ -35,7 +35,7 @@ Determine outcome. Return ONLY JSON.
 
 PREDICTION: "${disambiguated}"
 SUCCESS CRITERIA: "${successCriteria}"
-RUNBOOK: ${runbookMarkdown.substring(0, 2000)}
+RUNBOOK: ${(runbookMarkdown || "").substring(0, 2000)}
 EVIDENCE: ${JSON.stringify(stepResults)}
 
 Rules:

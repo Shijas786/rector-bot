@@ -31,6 +31,7 @@ model Prediction {
   successCriteria String?
   primarySource   String?
   runbookRef      String?
+  runbook         String?
   resolutionDate  DateTime
   status          PredictionStatus @default(PENDING)
   outcome         Boolean?

@@ -208,6 +208,7 @@ export async function executePredictionPipeline(
                 successCriteria: disambiguation.successCriteria,
                 primarySource: disambiguation.primarySource,
                 runbookRef,
+                runbook,
                 resolutionDate: new Date(disambiguation.resolutionDate),
                 txHashSubmit: txHash,
             } as any,

@@ -78,7 +78,7 @@ export async function executeRunbook(runbookMarkdown: string): Promise<RunbookEx
         evidenceJSON: JSON.stringify({
             timestamp,
             steps: results,
-            runbook: runbookMarkdown.substring(0, 500),
+            runbook: (runbookMarkdown || "").substring(0, 500),
         }, null, 2),
         timestamp,
     };

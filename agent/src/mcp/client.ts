@@ -29,6 +29,9 @@ export class MCPClient {
     private buffer = "";
 
     async connect(): Promise<void> {
+        if (this.process) return; // Prevent multiple connections
+        
+        console.log("[MCP] Spawning client process...");
         this.process = spawn("npx", ["-y", "@bnb-chain/mcp@latest"], {
             stdio: ["pipe", "pipe", "pipe"],
             env: {
@@ -48,6 +51,7 @@ export class MCPClient {
 
         this.process.on("close", (code) => {
             console.log(`[MCP] Process exited with code ${code}`);
+            this.process = null;
         });
 
         // Wait for MCP server to be ready
@@ -57,6 +61,7 @@ export class MCPClient {
 
     private processBuffer(): void {
         const lines = this.buffer.split("\n");
+        // The last part is either an incomplete line or empty string
         this.buffer = lines.pop() || "";
 
         for (const line of lines) {
@@ -69,11 +74,28 @@ export class MCPClient {
                     if (response.error) {
                         pending.reject(new Error(response.error.message));
                     } else {
-                        pending.resolve(response.result);
+                        // Unpack the JSON-RPC result format from MCP tools
+                        const toolResult = response.result as { content?: Array<{ text?: string }> };
+                        if (toolResult && toolResult.content && toolResult.content.length > 0) {
+                            const rawText = toolResult.content[0].text || "{}";
+                            console.log(`[MCP] Raw text length: ${rawText.length}`);
+                            console.log(`[MCP] Raw text head: ${rawText.substring(0, 150)}...`);
+                            
+                            try {
+                                const parsed = JSON.parse(rawText);
+                                pending.resolve(parsed);
+                            } catch {
+                                pending.resolve(rawText);
+                            }
+                        } else {
+                            console.log("[MCP Raw Result]", JSON.stringify(response.result));
+                            pending.resolve(response.result);
+                        }
                     }
                 }
             } catch {
-                // Not JSON, skip
+                // Not a valid JSON-RPC message, could be a log
+                console.log("[MCP stdout]", line);
             }
         }
     }

@@ -54,8 +54,14 @@ export async function packageAndUploadEvidence(
     const evidenceHash = ethers.keccak256(ethers.toUtf8Bytes(evidenceJSON));
     const signature = await wallet.signMessage(ethers.getBytes(evidenceHash));
 
-    // Upload to BNB Greenfield
-    const evidenceRef = await uploadEvidence(predictionId, evidenceJSON);
+    let evidenceRef: string;
+    try {
+        evidenceRef = await uploadEvidence(predictionId, evidenceJSON);
+    } catch (error: any) {
+        console.error(`[Evidence] Failed to upload to Greenfield:`, error.message);
+        console.log(`[Evidence] Fallback: Storing raw attestation in Postgres`);
+        evidenceRef = `local:${predictionId}`;
+    }
 
     console.log(`[Evidence] Packaged and uploaded for prediction #${predictionId}`);
 

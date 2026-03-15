@@ -57,11 +57,26 @@ async function resolveExpiredPredictions(): Promise<void> {
                 continue;
             }
 
-            // 1. Download runbook
-            const runbook = await downloadRunbook(p.runbookRef);
+            // 1. Download or retrieve runbook
+            let runbook = (p as any).runbook || "";
+            if (!runbook && p.runbookRef) {
+                console.log(`[Cron] #${p.id} Fetching from runbookRef: ${p.runbookRef}`);
+                try {
+                    runbook = await downloadRunbook(p.runbookRef);
+                } catch (e: any) {
+                    console.error(`[Cron] #${p.id} ERROR downloading runbook:`, e.message);
+                }
+            }
+            
+            if (!runbook) {
+                console.warn(`[Cron] #${p.id} No runbook content found. Skipping.`);
+                continue;
+            }
 
             // 2. Execute verification steps
+            console.log(`[Cron] #${p.id} Executing runbook...`);
             const execution = await executeRunbook(runbook);
+            console.log(`[Cron] #${p.id} Execution yielded ${execution.stepResults.length} step results`);
 
             // 3. Determine outcome via GPT-4o
             const outcomeResult = await determineOutcome(
@@ -91,7 +106,7 @@ async function resolveExpiredPredictions(): Promise<void> {
                     outcome: outcome === "INCONCLUSIVE" ? null : (outcome as boolean),
                     confidence,
                     evidenceRef,
-                    reasoning: reasoning,
+                    reasoning: reasoning || "Verification complete",
                     resolvedAt: new Date(),
                 },
             });
@@ -109,7 +124,7 @@ async function resolveExpiredPredictions(): Promise<void> {
                             outcome as boolean,
                             confidence,
                             evidenceRef,
-                            reasoning.substring(0, 280),
+                            (reasoning || "").substring(0, 280),
                             signature
                         );
                         txHash = res.txHash;
@@ -190,7 +205,7 @@ async function main() {
     } catch (e) {
         console.error("[Cron MCP ERROR]", e);
     }
-
+    
     // Run immediately on startup
     await resolveExpiredPredictions();
 

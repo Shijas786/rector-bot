@@ -56,9 +56,19 @@ export async function uploadEvidence(
             filePath: tempPath,
             privateKey: process.env.PRIVATE_KEY,
             network: "testnet",
-        }) as { objectName?: string; txHash?: string };
+        }) as any;
 
-        const ref = `gnfd://${EVIDENCE_BUCKET}/${objectName}`;
+        if (typeof result === "string") {
+            try {
+                const parsed = JSON.parse(result);
+                if (parsed.status === "error") throw new Error(parsed.message);
+                return `gnfd://${EVIDENCE_BUCKET}/${parsed.objectName || objectName}`;
+            } catch (e: any) {
+                if (e.message.includes("error")) throw e;
+            }
+        }
+
+        const ref = `gnfd://${EVIDENCE_BUCKET}/${result?.objectName || objectName}`;
         console.log(`[Greenfield] Evidence uploaded: ${ref}`);
         return ref;
     } finally {
@@ -78,16 +88,30 @@ export async function downloadRunbook(
     
     if (runbookRef.startsWith("gnfd://")) {
         const parts = runbookRef.replace("gnfd://", "").split("/");
-        bucketName = parts[0];
-        objectName = parts.slice(1).join("/");
+        bucketName = parts.shift() || RUNBOOKS_BUCKET;
+        objectName = parts.join("/");
     }
+
+    console.log(`[Greenfield] Downloading -> Bucket: ${bucketName} | Object: ${objectName}`);
 
     const result = await mcpClient.callTool("gnfd_download_object", {
         bucketName,
         objectName,
-    }) as { body: string };
+        network: "testnet"
+    }) as any;
 
-    return result.body;
+    if (typeof result === "string") {
+        try {
+            const parsed = JSON.parse(result);
+            if (parsed.status === "error") throw new Error(parsed.message);
+            return parsed.body || result; 
+        } catch {
+            return result;
+        }
+    }
+    
+    if (result?.status === "error") throw new Error(result.message);
+    return result?.body || "";
 }
 
 /**
@@ -101,7 +125,19 @@ export async function downloadEvidence(
     const result = await mcpClient.callTool("gnfd_download_object", {
         bucketName: EVIDENCE_BUCKET,
         objectName,
-    }) as { body: string };
+        network: "testnet"
+    }) as any;
 
-    return result.body;
+    if (typeof result === "string") {
+        try {
+            const parsed = JSON.parse(result);
+            if (parsed.status === "error") throw new Error(parsed.message);
+            return parsed.body || result; 
+        } catch {
+            return result;
+        }
+    }
+    
+    if (result?.status === "error") throw new Error(result.message);
+    return result?.body || "";
 }
