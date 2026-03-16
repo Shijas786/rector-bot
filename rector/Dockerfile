@@ -19,8 +19,6 @@ WORKDIR /app/agent
 RUN npm install --include=dev
 RUN npx prisma generate
 
-EXPOSE 18789
-
 # Start script
 WORKDIR /app/rector
 CMD ["./start.sh"]

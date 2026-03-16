@@ -98,107 +98,12 @@ GATEWAY_PID=$!
 echo "Waiting 15s for gateway..."
 sleep 15
 
-# Step 5: Start HTTP Agent API server (on port 3001)
-echo "=== Starting Rector Agent HTTP API ==="
-cd /app/agent && node dist/api.js &
-API_PID=$!
-echo "Agent API PID: $API_PID"
-cd /
-
-# Wait for API server to be ready
-echo "Waiting for Rector Agent API to be ready..."
-for i in $(seq 1 10); do
-    if curl -s http://127.0.0.1:3001/health | grep -q "ok"; then
-        echo "Agent API is UP!"
-        break
-    fi
-    echo "Still waiting for API (attempt $i)..."
-    sleep 3
-done
-
 # Start auto-resolution cron
-echo "Rector live. PID: $GATEWAY_PID"
-# (polls every hour for expired predictions)
 echo "=== Starting auto-resolution cron ==="
 cd /app/agent && node dist/scripts/cron.js &
-CRON_PID=$!
-echo "Cron PID: $CRON_PID"
-cd /
 
-# Step 6: Diagnostic Bridge Test
-echo "=== 🚨 LOUD DIAGNOSTIC CHECK 🚨 ==="
-which node || echo "ERROR: node not found"
-node -v || echo "ERROR: node -v failed"
-which curl || echo "ERROR: curl not found"
-echo "--- Testing Bridge Connectivity ---"
-node -e "
-  const http = require('http');
-  const req = http.get('http://127.0.0.1:3001/health', res => {
-    console.log('✅ BRIDGE SUCCESS: API responded with ' + res.statusCode);
-    process.exit(0);
-  });
-  req.on('error', e => {
-    console.log('❌ BRIDGE FAILURE: ' + e.message);
-    process.exit(1);
-  });
-  setTimeout(() => { console.log('❌ BRIDGE TIMEOUT'); process.exit(1); }, 5000);
-" || echo "Diagnostic test failed"
-
-# Verify SOUL.md content
-echo "=== ACTIVE SOUL.md DUMP ==="
-cat /root/.openclaw/agents/main/agent/SOUL.md
-
-# Step 6: Fix Greenfield reed-solomon BUG (hardcoded path in 1.5.0)
-echo "=== Fixing Greenfield reed-solomon path bug ==="
-FIX_DIR="/home/runner/work/bnbchain-mcp/bnbchain-mcp/node_modules/@bnb-chain/reed-solomon/dist"
-mkdir -p "$FIX_DIR"
-ln -sf /app/agent/node_modules/@bnb-chain/reed-solomon/dist/sub-worker.js "$FIX_DIR/sub-worker.js"
-
-# Step 7: Parse the JSONL log and dump ALL message content
-echo "=== FULL GATEWAY LOG (parsed) ==="
-node -e "
-const fs = require('fs');
-const files = fs.readdirSync('/tmp/openclaw/').filter(f => f.endsWith('.log'));
-files.forEach(f => {
-  const lines = fs.readFileSync('/tmp/openclaw/' + f, 'utf8').split('\n').filter(l => l.trim());
-  lines.forEach(l => {
-    try {
-      const j = JSON.parse(l);
-      // Extract the actual message from numbered keys
-      const msgs = [];
-      for (let i = 0; i < 10; i++) {
-        if (j[String(i)] !== undefined) msgs.push(String(j[String(i)]).trim());
-      }
-      const msg = msgs.filter(m => m).join(' | ');
-      if (msg) console.log('[' + (j._meta?.logLevelName || '?') + '] ' + msg);
-    } catch(e) {}
-  });
-});
-" 2>&1 | tail -100
-
-# Step 7: Monitor log for new entries every 30s  
-while true; do
-  sleep 30
-  LOGFILE=$(ls -t /tmp/openclaw/openclaw-*.log 2>/dev/null | head -1)
-  if [ -n "$LOGFILE" ]; then
-    echo "=== LOG $(date) ==="
-    node -e "
-    const fs = require('fs');
-    const lines = fs.readFileSync('$LOGFILE', 'utf8').split('\n').filter(l => l.trim());
-    // Show last 30 entries
-    lines.slice(-30).forEach(l => {
-      try {
-        const j = JSON.parse(l);
-        const msgs = [];
-        for (let i = 0; i < 10; i++) {
-          if (j[String(i)] !== undefined) msgs.push(String(j[String(i)]).substring(0, 500));
-        }
-        const msg = msgs.filter(m => m.trim()).join(' | ');
-        if (msg) console.log('[' + (j._meta?.logLevelName || '?') + '] ' + msg);
-      } catch(e) {}
-    });
-    " 2>&1
-  fi
-done &
-
-wait $GATEWAY_PID
+# Step 5: Start HTTP Agent API server (on port PORT)
+echo "=== Starting Rector Agent HTTP API ==="
+cd /app/agent
+# We use exec here so the API process becomes the PID 1 and is seen by Railway as the main service
+exec node dist/api.js
