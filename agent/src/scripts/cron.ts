@@ -21,7 +21,7 @@ import { packageAndUploadEvidence } from "../pipeline/packageEvidence.js";
 import { mcpClient } from "../mcp/client.js";
 import { ethers } from "ethers";
 
-const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const POLL_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
 const NOTIFY_QUEUE: { telegramId: string; message: string }[] = [];
 
 // ─── Main resolution logic ────────────────────────────────────────────────────
