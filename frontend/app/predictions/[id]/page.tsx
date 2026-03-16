@@ -19,12 +19,14 @@ interface Prediction {
   };
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://openclaw-predictor-agent-production.up.railway.app";
+
 export default function PredictionPage({ params }: { params: { id: string } }) {
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`http://localhost:3001/predictions/${params.id}`)
+    fetch(`${API_BASE}/predictions/${params.id}`)
       .then((res) => res.json())
       .then((data) => {
         setPrediction(data);

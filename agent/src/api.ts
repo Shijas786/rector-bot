@@ -30,7 +30,7 @@ process.on("uncaughtException", (err) => {
     console.error(`[FATAL] Uncaught Exception:`, err);
 });
 
-const PORT = process.env.AGENT_API_PORT || 3001;
+const PORT = process.env.PORT || process.env.AGENT_API_PORT || 3001;
 
 
 // Health check
@@ -141,6 +141,27 @@ app.get("/predict-get", async (req, res) => {
         res.json({ message: resultMessage });
     } catch (error: any) {
         console.error("[API /predict-get] Error:", error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 3c. Disambiguate without recording (for web preview)
+app.post("/disambiguate", async (req, res) => {
+    try {
+        const { claimText } = req.body;
+        if (!claimText) return res.status(400).json({ error: "Missing claimText" });
+
+        const { disambiguatePrediction, extractResolutionDate, buildRunbook } = await import("./index.js");
+        const resolutionDate = extractResolutionDate(claimText);
+        const disambiguation = await disambiguatePrediction(claimText, resolutionDate);
+        const runbook = await buildRunbook(disambiguation, Date.now());
+
+        res.json({ 
+            disambiguation, 
+            runbook,
+            resolutionDate: resolutionDate.toISOString()
+        });
+    } catch (error: any) {
         res.status(500).json({ error: error.message });
     }
 });

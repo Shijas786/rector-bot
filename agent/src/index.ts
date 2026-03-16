@@ -7,6 +7,7 @@ import { disambiguatePrediction, formatDisambiguation, DisambiguationResult } fr
 export { disambiguatePrediction, formatDisambiguation };
 export type { DisambiguationResult };
 import { buildRunbook } from "./pipeline/buildRunbook.js";
+export { buildRunbook };
 import { uploadRunbook } from "./mcp/greenfield.js";
 import { submitPrediction, getAccuracy, getPrediction } from "./mcp/bsc.js";
 import { scheduleResolution, startWorker } from "./scheduler/queue.js";

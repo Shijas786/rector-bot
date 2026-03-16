@@ -14,12 +14,22 @@ interface Prediction {
   };
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://openclaw-predictor-agent-production.up.railway.app";
+
 export default function HomePage() {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Protocol Chat State
+  const [messages, setMessages] = useState<{ role: 'user' | 'rector', text: string, runbookClaim?: string }[]>([]);
+  const [inputValue, setInputValue] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [webUserId] = useState(() => "web-user-" + Math.random().toString(36).substring(7));
+
   useEffect(() => {
-    fetch("http://localhost:3001/predictions")
+    fetch(`${API_BASE}/predictions`)
       .then((res) => res.json())
       .then((data) => {
         setPredictions(data);
@@ -30,6 +40,93 @@ export default function HomePage() {
         setLoading(false);
       });
   }, []);
+
+  // Auto-scroll chat
+  useEffect(() => {
+    const anchor = document.getElementById('chat-anchor');
+    anchor?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isTyping]);
+
+  const handleSendMessage = async () => {
+    if (!inputValue.trim()) return;
+
+    const userText = inputValue;
+    setMessages(prev => [...prev, { role: 'user', text: userText }]);
+    setInputValue("");
+    setIsTyping(true);
+
+    try {
+      // Use /message endpoint for stateful chat
+      const res = await fetch(`${API_BASE}/message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          telegramId: webUserId, 
+          username: "Web Explorer", 
+          text: userText 
+        })
+      });
+      const data = await res.json();
+      
+      // If the response contains a runbook request, we also trigger the /disambiguate for the nice UI
+      if (data.message.toLowerCase().includes("shall i proceed") || data.message.toLowerCase().includes("understood")) {
+        const dRes = await fetch(`${API_BASE}/disambiguate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ claimText: userText })
+        });
+        const dData = await dRes.json();
+        if (dData.runbook) {
+          setMessages(prev => [...prev, { 
+            role: 'rector', 
+            text: dData.runbook, 
+            runbookClaim: userText 
+          }]);
+        } else {
+          setMessages(prev => [...prev, { role: 'rector', text: data.message }]);
+        }
+      } else {
+        setMessages(prev => [...prev, { role: 'rector', text: data.message }]);
+      }
+    } catch (e) {
+      setMessages(prev => [...prev, { role: 'rector', text: "Protocol connection lost. Is the Agent API online?" }]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const handleFinalRecord = async (claimText: string) => {
+    setIsRecording(true);
+    setStatusMessage("Recording on-chain via Shadow Wallet...");
+
+    try {
+      const res = await fetch(`${API_BASE}/predict`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          claimText,
+          telegramId: webUserId,
+          username: "Web Explorer"
+        })
+      });
+      const data = await res.json();
+      
+      if (data.message && data.message.includes("Prediction #")) {
+        setMessages(prev => [...prev, { role: 'rector', text: "✅ Claim Recorded Successfully! Re-syncing protocol feed..." }]);
+        setStatusMessage("Success! Prediction is now live.");
+        // Refresh feed
+        const freshRes = await fetch("http://localhost:3001/predictions");
+        const freshData = await freshRes.json();
+        setPredictions(freshData);
+      } else {
+        setStatusMessage("Error: " + (data.error || "Failed to record."));
+      }
+    } catch (e) {
+      setStatusMessage("Blockchain transaction failed.");
+    } finally {
+      setIsRecording(false);
+    }
+  };
 
   return (
     <div className="container" style={{ paddingBottom: "6rem" }}>
@@ -60,9 +157,74 @@ export default function HomePage() {
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", gap: "1rem" }}>
-          <a href="https://t.me/RectorBot" className="btn btn-primary">Start Claiming</a>
+          <button onClick={() => document.getElementById('create-claim')?.scrollIntoView({ behavior: 'smooth' })} className="btn btn-primary">Start Claiming</button>
           <a href="#feed" className="btn btn-secondary">Explore Live Feed</a>
         </div>
+      </section>
+
+      {/* ── Protocol Chat Interaction ── */}
+      <section id="create-claim" className="mb-20" style={{ maxWidth: "800px", margin: "0 auto 10vh auto" }}>
+        <div className="logic-label mb-8 text-center" style={{ letterSpacing: "0.2em" }}>PROTOCOL INTERFACE ACTIVE</div>
+        
+        <div className="chat-container">
+          {/* Initial Greeting */}
+          <div className="chat-bubble rector">
+            Welcome to Rector Protocol. I am your agentic oracle. <br/>
+            What claim would you like to verify on-chain today?
+          </div>
+
+          {messages.map((msg, i) => (
+            <div key={i} className={`chat-bubble ${msg.role}`}>
+              {msg.role === 'rector' && msg.text.startsWith('# Prediction Runbook') ? (
+                <div className="runbook-preview-card">
+                  <div className="runbook-preview-header">
+                    <span className="mono" style={{ fontSize: '0.7rem' }}>VERIFICATION PLAN</span>
+                    <div className="runbook-tag">READY</div>
+                  </div>
+                  <pre style={{ whiteSpace: 'pre-wrap', marginBottom: '1.5rem' }}>{msg.text}</pre>
+                  <button 
+                    className="btn btn-primary w-full"
+                    onClick={() => handleFinalRecord(msg.runbookClaim || "")}
+                    disabled={isRecording}
+                  >
+                    {isRecording ? "Recording on-chain..." : "Join to Create Claim"}
+                  </button>
+                </div>
+              ) : (
+                msg.text
+              )}
+            </div>
+          ))}
+
+          {isTyping && (
+            <div className="typing-indicator">
+              <span></span><span></span><span></span>
+            </div>
+          )}
+
+          <div id="chat-anchor" />
+        </div>
+
+        <div className="chat-input-wrapper">
+          <input 
+            type="text" 
+            className="chat-input"
+            placeholder="Describe your prediction..."
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+            disabled={isTyping}
+          />
+          <button className="chat-send-btn" onClick={handleSendMessage} disabled={isTyping}>
+            {isTyping ? "..." : "↑"}
+          </button>
+        </div>
+        
+        {statusMessage && (
+          <div className="mono text-center mt-4" style={{ fontSize: '0.8rem', color: 'var(--yellow)' }}>
+            {statusMessage}
+          </div>
+        )}
       </section>
 
       {/* ── Scrolling Live Ticker ── */}
