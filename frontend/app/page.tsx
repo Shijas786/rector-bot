@@ -36,9 +36,10 @@ export default function HomePage() {
       {/* ── Hero Section ── */}
       <section className="text-center" style={{ marginTop: "10vh", marginBottom: "15vh" }}>
         <div className="btn-badge mb-4">PLAY WITH THE FUTURE</div>
-        <h1 className="hero-title">Rector Claims</h1>
-        <p style={{ color: "var(--text-secondary)", maxWidth: "600px", margin: "0 auto 3rem auto", fontSize: "1.1rem" }}>
-          The world's first agentic verification engine. Turn your words into on-chain proofs with high-fidelity AI runbooks.
+        <h1 className="hero-title" style={{ fontSize: "clamp(2.5rem, 8vw, 4.5rem)" }}>Agentic Verification</h1>
+        <h2 style={{ fontSize: "1.5rem", fontWeight: "400", color: "var(--text-secondary)", marginBottom: "2rem", marginTop: "-1rem" }}>via Claim Runbook</h2>
+        <p style={{ color: "var(--text-secondary)", maxWidth: "700px", margin: "0 auto 3rem auto", fontSize: "1.1rem", lineHeight: "1.6" }}>
+          Rector shifts oracles from slow, coordination-heavy disputes to fast, agentic verification. Every claim is paired with an explicit verification plan—a **Claim Runbook**—executed automatically on-chain.
         </p>
 
         <div className="logic-block">
