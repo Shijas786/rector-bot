@@ -39,18 +39,44 @@ BSC CONTRACT: ${disambiguation.bscContract || "null"}
 
 Task: Generate a markdown verification runbook.
 
-CRITICAL: If the prediction is "at least once", "hits", or "reaches" a price (a range check), 
-you MUST include a Binance Kline check step to verify the high/low across the interval.
+IMPORTANT: Decide what TYPE of claim this is and use the right step types:
+
+═══ CRYPTO PRICE CLAIMS ═══
+For price targets, use Binance + Chainlink + CoinGecko:
+- Type: kline_check (for range/peak checks)
+- Type: api_call with Binance/CoinGecko URLs
+- Type: bsc_read with Chainlink contracts
 
 Binance Kline URL Template:
 https://api.binance.com/api/v3/klines?symbol=BNBUSDT&interval=1m&startTime=${startTimeMs}&endTime=${endTimeMs}
-(Adjust symbol as needed)
-
-Priority: Binance API → Chainlink BSC → CoinGecko.
-Minimum 2 independent sources.
 
 Known Chainlink BSC feeds:
 ${Object.entries(CHAINLINK_FEEDS).map(([k, v]) => `- ${k}: ${v}`).join("\n")}
+
+═══ NEWS / EVENTS / SPORTS / GENERAL CLAIMS ═══
+For non-crypto claims (sports results, elections, product launches, world events, etc.):
+
+### Step N [NEWS]
+- Type: news_search
+- Extract: <search query keywords>
+- Success: articles found confirming/denying the claim
+
+### Step N [WEB]
+- Type: web_search  
+- Extract: <search query keywords>
+- Success: answer or abstract confirms/denies the claim
+
+### Step N [WIKI]
+- Type: wiki_lookup
+- Extract: <topic name>
+- Success: article found with relevant information
+
+═══ RULES ═══
+- Use minimum 2 independent sources
+- For crypto: Binance API → Chainlink BSC → CoinGecko
+- For news/events: news_search → web_search → wiki_lookup
+- For mixed claims: combine both types
+- ALWAYS include a news_search or web_search step for non-price claims
 
 Format:
 
@@ -67,28 +93,10 @@ Format:
 "{precise disambiguated claim}"
 
 ## Steps
-
-### Step 1 [PRIMARY] [BINANCE_KLINES] weight:10
-- Type: kline_check
-- Source: https://api.binance.com/api/v3/klines?symbol=...&interval=1m&startTime={startTime_ms}&endTime={endTime_ms}
-- Extract: high
-- Success: max(high) >= ...
-
-### Step 2 [BACKUP] [BSC_ONCHAIN] weight:9
-- Type: bsc_read
-- Contract: 0x...
-- Description: Chainlink .../USD Feed on BSC
-- Function: latestAnswer()
-- Success: value / 1e8 >= ...
-
-### Step 3 [FALLBACK] weight:6
-- Type: api_call
-- Source: https://api.binance.com/api/v3/ticker/price?symbol=...
-- Extract: price
-- Success: parseFloat(price) >= ...
+(generate appropriate steps based on claim type)
 
 ## Outcome Logic
-STEP_1 OR STEP_2 (≥2 sources must agree)
+(describe how steps combine to determine outcome)
 
 Use prediction ID ${predictionId} in the RunbookID.
 Return ONLY the markdown runbook.`;

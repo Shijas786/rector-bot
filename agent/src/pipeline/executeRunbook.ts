@@ -1,5 +1,6 @@
 import { readChainlinkPrice } from "../mcp/bsc.js";
 import { getPolymarketEvent, getMarketOutcomeYesPrice } from "../mcp/polymarket.js";
+import { searchDuckDuckGo, searchNews, searchWikipedia } from "./dataSources.js";
 
 /**
  * Runbook Execution Pipeline
@@ -47,6 +48,14 @@ export async function executeRunbook(runbookMarkdown: string): Promise<RunbookEx
                 result = await executeCoinGeckoStep(step);
             } else if (step.type === "api_call" && step.source.includes("polymarket.com")) {
                 result = await executePolymarketStep(step);
+            } else if (step.type === "web_search") {
+                result = await executeDuckDuckGoStep(step);
+            } else if (step.type === "news_search") {
+                result = await executeNewsStep(step);
+            } else if (step.type === "wiki_lookup") {
+                result = await executeWikiStep(step);
+            } else if (step.type === "api_call") {
+                result = await executeGenericApiStep(step);
             } else {
                 result = {
                     stepId: step.id,
@@ -265,4 +274,119 @@ function evaluateSuccess(condition: string, value: number): boolean {
     if (condition.toLowerCase().includes("false") && value === 0) return true;
 
     return false;
+}
+
+// ─── DuckDuckGo Step ──────────────────────────────────────────────────────────
+
+async function executeDuckDuckGoStep(step: ParsedStep): Promise<StepResult> {
+    const query = step.extract || step.source;
+    const result = await searchDuckDuckGo(query);
+
+    const combinedText = [result.answer, result.abstract, ...result.relatedTopics]
+        .filter(t => t)
+        .join(" | ");
+
+    return {
+        stepId: step.id,
+        type: step.type,
+        source: `DuckDuckGo: ${query}`,
+        value: null,
+        passed: combinedText.length > 0,
+        finding: combinedText.substring(0, 500) || "No results found",
+        error: null,
+    };
+}
+
+// ─── NewsAPI Step ─────────────────────────────────────────────────────────────
+
+async function executeNewsStep(step: ParsedStep): Promise<StepResult> {
+    const query = step.extract || step.source;
+    const articles = await searchNews(query);
+
+    if (articles.length === 0) {
+        return {
+            stepId: step.id,
+            type: step.type,
+            source: `NewsAPI: ${query}`,
+            value: null,
+            passed: false,
+            finding: "No relevant news articles found",
+            error: null,
+        };
+    }
+
+    const summary = articles
+        .map(a => `[${a.source}] ${a.title}: ${a.description}`)
+        .join(" || ")
+        .substring(0, 800);
+
+    return {
+        stepId: step.id,
+        type: step.type,
+        source: `NewsAPI: ${query}`,
+        value: articles.length,
+        passed: true,
+        finding: summary,
+        error: null,
+    };
+}
+
+// ─── Wikipedia Step ───────────────────────────────────────────────────────────
+
+async function executeWikiStep(step: ParsedStep): Promise<StepResult> {
+    const query = step.extract || step.source;
+    const wiki = await searchWikipedia(query);
+
+    if (!wiki.extract) {
+        return {
+            stepId: step.id,
+            type: step.type,
+            source: `Wikipedia: ${query}`,
+            value: null,
+            passed: false,
+            finding: "No Wikipedia article found",
+            error: null,
+        };
+    }
+
+    return {
+        stepId: step.id,
+        type: step.type,
+        source: wiki.url || `Wikipedia: ${query}`,
+        value: null,
+        passed: true,
+        finding: `${wiki.title}: ${wiki.extract}`.substring(0, 500),
+        error: null,
+    };
+}
+
+// ─── Generic API Step ─────────────────────────────────────────────────────────
+
+async function executeGenericApiStep(step: ParsedStep): Promise<StepResult> {
+    try {
+        const res = await fetch(step.source);
+        const text = await res.text();
+        let data: any;
+        try { data = JSON.parse(text); } catch { data = text; }
+
+        return {
+            stepId: step.id,
+            type: step.type,
+            source: step.source,
+            value: null,
+            passed: true,
+            finding: JSON.stringify(data).substring(0, 500),
+            error: null,
+        };
+    } catch (e: any) {
+        return {
+            stepId: step.id,
+            type: step.type,
+            source: step.source,
+            value: null,
+            passed: false,
+            finding: "API call failed",
+            error: e.message,
+        };
+    }
 }
