@@ -12,10 +12,12 @@ export interface DisambiguationResult {
     entities: string[];
     successCriteria: string;
     verifiability: "HIGH" | "MEDIUM" | "LOW";
-    primarySource: "binance_api" | "polymarket_api" | "chainlink_bsc" | "coingecko";
+    primarySource: "binance_api" | "polymarket_api" | "chainlink_bsc" | "coingecko" | "zerion_api" | "news_api" | "duckduckgo";
     bscContract: string | null;
     ambiguities: string[];
     resolutionDate: string;
+    feasibility: string;
+    recommendation: "APPROVE" | "REJECT";
 }
 
 /**
@@ -49,10 +51,12 @@ Return ONLY JSON:
   "entities": [...],
   "successCriteria": "...",
   "verifiability": "HIGH|MEDIUM|LOW",
-  "primarySource": "binance_api|polymarket_api|chainlink_bsc|coingecko",
+  "primarySource": "binance_api|polymarket_api|chainlink_bsc|coingecko|zerion_api|news_api|duckduckgo",
   "bscContract": "0x... or null",
   "ambiguities": [...],
-  "resolutionDate": "ISO_8601_DATE_STRING"
+  "resolutionDate": "ISO_8601_DATE_STRING",
+  "feasibility": "Detailed explanation of why this is or isn't verifiable",
+  "recommendation": "APPROVE|REJECT"
 }`;
 
     const response = await openai.chat.completions.create({
@@ -80,7 +84,9 @@ ${result.disambiguated}
 
 Verifiability: ${result.verifiability} ${verIcon}
 Primary source: ${result.primarySource.replace("_", " ")}
+Feasibility: ${result.feasibility}
+Recommendation: ${result.recommendation === "APPROVE" ? "✅ APPROVED" : "❌ REJECTED - Too ambiguous or unverifiable"}
 ${result.ambiguities.length > 0 ? `\n⚠️ Possible ambiguities:\n${result.ambiguities.map(a => `• ${a}`).join("\n")}` : ""}
 
-Is this correct? (yes/no)`;
+${result.recommendation === "APPROVE" ? "Shall I proceed to build the Runbook? (yes/no)" : "I recommend NOT proceeding. Do you want to force it anyway? (yes/no)"}`;
 }

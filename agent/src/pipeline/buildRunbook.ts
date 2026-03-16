@@ -91,6 +91,13 @@ For non-crypto claims (sports results, elections, product launches, world events
 - Extract: <topic name>
 - Success: article found with relevant information
 
+═══ STEP STRUCTURE (FLOWCHART ALIGNMENT) ═══
+Every verification step MUST follow this exact sub-step pattern:
+1. **Fetch Data**: Define the precise API URL, Contract Address, or Search Query.
+2. **Verify Source**: Specify how to verify the authenticity of the data (e.g., checking SSL, using an alternative provider, or validating a blockchain signature).
+3. **Apply Criteria**: Define the logic/math to apply to the fetched data (e.g., compare price to target, check if keyword exists).
+4. **Return YES/NO**: State clearly what data values lead to a YES vs NO outcome for this specific step.
+
 ═══ RULES ═══
 - Use minimum 2 independent sources
 - For crypto: Binance API → Chainlink BSC → CoinGecko
@@ -113,7 +120,15 @@ Format:
 "{precise disambiguated claim}"
 
 ## Steps
-(generate appropriate steps based on claim type)
+
+### Step 1: [Name]
+- **Type**: <pipeline_type>
+1. **Fetch Data**: ...
+2. **Verify Source**: ...
+3. **Apply Criteria**: ...
+4. **Return YES/NO**: ...
+
+(Repeat for Step 2+)
 
 ## Outcome Logic
 (describe how steps combine to determine outcome)

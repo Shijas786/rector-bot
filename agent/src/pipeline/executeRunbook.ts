@@ -22,6 +22,8 @@ export interface StepResult {
 export interface RunbookExecution {
     stepResults: StepResult[];
     evidenceJSON: string;
+    overallOutcome: boolean;
+    proofNarrative: string;
     timestamp: string;
 }
 
@@ -88,15 +90,40 @@ export async function executeRunbook(runbookMarkdown: string): Promise<RunbookEx
         }
     }
 
+    const overallOutcome = results.every(r => r.passed);
+    const proofNarrative = summarizeResults(results);
+
     return {
         stepResults: results,
         evidenceJSON: JSON.stringify({
+            version: "1.0.0",
+            attestationType: "AgenticVerification",
             timestamp,
-            steps: results,
-            runbook: (runbookMarkdown || "").substring(0, 500),
+            decision: overallOutcome ? "YES" : "NO",
+            reasoning: proofNarrative,
+            verificationPipeline: "OpenClaw-Rector",
+            evidenceLog: results.map(r => ({
+                step: r.stepId,
+                source: r.source,
+                finding: r.finding,
+                passed: r.passed
+            })),
         }, null, 2),
+        overallOutcome,
+        proofNarrative,
         timestamp,
     };
+}
+
+function summarizeResults(results: StepResult[]): string {
+    const passedSteps = results.filter(r => r.passed);
+    const failedSteps = results.filter(r => !r.passed);
+
+    if (failedSteps.length === 0) {
+        return `Verification successful across all ${results.length} steps. Primary findings: ${results.map(r => r.finding).join("; ")}.`;
+    }
+
+    return `Verification failed. ${failedSteps.length} of ${results.length} steps did not meet successful criteria. Failed findings: ${failedSteps.map(r => r.finding).join("; ")}.`;
 }
 
 interface ParsedStep {
