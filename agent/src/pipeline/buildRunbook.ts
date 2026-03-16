@@ -53,6 +53,26 @@ https://api.binance.com/api/v3/klines?symbol=BNBUSDT&interval=1m&startTime=${sta
 Known Chainlink BSC feeds:
 ${Object.entries(CHAINLINK_FEEDS).map(([k, v]) => `- ${k}: ${v}`).join("\n")}
 
+═══ ON-CHAIN ANALYTICS / WALLETS (ZERION) ═══
+For claims about wallet balances, NFT ownership, or non-Binance token data:
+
+### Step N [WALLET]
+- Type: wallet_check
+- Source: <wallet address>
+- Success: value >= <target USD value>
+
+### Step N [NFT]
+- Type: nft_check
+- Source: <wallet address>
+- Extract: <collection name or ID>
+- Success: true (if they hold it)
+
+### Step N [ASSET]
+- Type: asset_check
+- Source: <zerion asset ID, e.g. ethereum-mainnet:0x...>
+- Extract: market_cap (optional)
+- Success: value >= ...
+
 ═══ NEWS / EVENTS / SPORTS / GENERAL CLAIMS ═══
 For non-crypto claims (sports results, elections, product launches, world events, etc.):
 

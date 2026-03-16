@@ -1,6 +1,6 @@
 import { readChainlinkPrice } from "../mcp/bsc.js";
 import { getPolymarketEvent, getMarketOutcomeYesPrice } from "../mcp/polymarket.js";
-import { searchDuckDuckGo, searchNews, searchWikipedia } from "./dataSources.js";
+import { searchDuckDuckGo, searchNews, searchWikipedia, getZerionWalletPortfolio, getZerionWalletPositions, getZerionWalletNFTs, getZerionFungible } from "./dataSources.js";
 
 /**
  * Runbook Execution Pipeline
@@ -48,6 +48,12 @@ export async function executeRunbook(runbookMarkdown: string): Promise<RunbookEx
                 result = await executeCoinGeckoStep(step);
             } else if (step.type === "api_call" && step.source.includes("polymarket.com")) {
                 result = await executePolymarketStep(step);
+            } else if (step.type === "wallet_check") {
+                result = await executeZerionWalletStep(step);
+            } else if (step.type === "nft_check") {
+                result = await executeZerionNftStep(step);
+            } else if (step.type === "asset_check") {
+                result = await executeZerionAssetStep(step);
             } else if (step.type === "web_search") {
                 result = await executeDuckDuckGoStep(step);
             } else if (step.type === "news_search") {
@@ -389,4 +395,81 @@ async function executeGenericApiStep(step: ParsedStep): Promise<StepResult> {
             error: e.message,
         };
     }
+}
+
+// ─── Zerion Steps ─────────────────────────────────────────────────────────────
+
+async function executeZerionWalletStep(step: ParsedStep): Promise<StepResult> {
+    const address = step.source;
+    const portfolio = await getZerionWalletPortfolio(address);
+    const totalValue = portfolio?.data?.attributes?.total?.value || 0;
+
+    return {
+        stepId: step.id,
+        type: step.type,
+        source: `Zerion Wallet: ${address}`,
+        value: totalValue,
+        passed: evaluateSuccess(step.successCondition || "", totalValue),
+        finding: `Wallet total value = $${totalValue.toFixed(2)}`,
+        error: null,
+    };
+}
+
+async function executeZerionNftStep(step: ParsedStep): Promise<StepResult> {
+    const address = step.source;
+    const nftPositions = await getZerionWalletNFTs(address);
+    const nfts = nftPositions?.data || [];
+    
+    // Check if a specific collection is required via extract field
+    const requiredCollection = step.extract?.toLowerCase();
+    let passed = nfts.length > 0;
+    let finding = `Wallet holds ${nfts.length} NFT positions`;
+
+    if (requiredCollection) {
+        const hasCollection = nfts.some((n: any) => 
+            n.attributes?.nft_info?.collection_info?.name?.toLowerCase().includes(requiredCollection) ||
+            n.attributes?.nft_info?.collection_info?.id?.toLowerCase() === requiredCollection
+        );
+        passed = hasCollection;
+        finding = hasCollection 
+            ? `Wallet holds ${requiredCollection} NFT`
+            : `Wallet does NOT hold ${requiredCollection} NFT`;
+    }
+
+    return {
+        stepId: step.id,
+        type: step.type,
+        source: `Zerion NFTs: ${address}`,
+        value: nfts.length,
+        passed,
+        finding,
+        error: null,
+    };
+}
+
+async function executeZerionAssetStep(step: ParsedStep): Promise<StepResult> {
+    const assetId = step.source; // e.g., "ethereum-mainnet:0xC02aa..."
+    const asset = await getZerionFungible(assetId);
+    const attr = asset?.data?.attributes;
+
+    const marketCap = attr?.market_data?.market_cap || 0;
+    const price = attr?.market_data?.price || 0;
+
+    let targetValue = price;
+    let finding = `Asset price = $${price}`;
+
+    if (step.extract === "market_cap") {
+        targetValue = marketCap;
+        finding = `Asset market cap = $${marketCap}`;
+    }
+
+    return {
+        stepId: step.id,
+        type: step.type,
+        source: `Zerion Asset: ${assetId}`,
+        value: targetValue,
+        passed: evaluateSuccess(step.successCondition || "", targetValue),
+        finding,
+        error: null,
+    };
 }

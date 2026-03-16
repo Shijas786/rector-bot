@@ -4,6 +4,7 @@
  */
 
 const NEWS_API_KEY = process.env.NEWS_API_KEY || "";
+const ZERION_API_KEY = process.env.ZERION_API_KEY || "";
 
 // ─── DuckDuckGo Instant Answer ────────────────────────────────────────────────
 
@@ -117,6 +118,55 @@ async function searchWikipediaFallback(query: string): Promise<WikiResult> {
     } catch {
         return { title: "", extract: "", description: "", url: "" };
     }
+}
+
+// ─── Zerion API ───────────────────────────────────────────────────────────────
+
+export async function fetchZerion(path: string): Promise<any> {
+    if (!ZERION_API_KEY) {
+        throw new Error("ZERION_API_KEY not set");
+    }
+
+    const res = await fetch(`https://api.zerion.io/v1/${path}`, {
+        headers: {
+            "accept": "application/json",
+            "authorization": `Basic ${Buffer.from(ZERION_API_KEY + ":").toString("base64")}`,
+        }
+    });
+
+    if (!res.ok) {
+        throw new Error(`Zerion API error: ${res.status} ${res.statusText}`);
+    }
+
+    return await res.json();
+}
+
+/**
+ * Get wallet portfolio stats (total value, etc.)
+ */
+export async function getZerionWalletPortfolio(address: string): Promise<any> {
+    return await fetchZerion(`wallets/${address}/portfolio`);
+}
+
+/**
+ * Get list of fungible tokens in a wallet
+ */
+export async function getZerionWalletPositions(address: string): Promise<any> {
+    return await fetchZerion(`wallets/${address}/positions`);
+}
+
+/**
+ * Get list of NFTs in a wallet
+ */
+export async function getZerionWalletNFTs(address: string): Promise<any> {
+    return await fetchZerion(`wallets/${address}/nft-positions`);
+}
+
+/**
+ * Get specific fungible asset info (market cap, price, etc.)
+ */
+export async function getZerionFungible(assetId: string): Promise<any> {
+    return await fetchZerion(`fungibles/${assetId}`);
 }
 
 // ─── Combined search for GPT context ─────────────────────────────────────────
