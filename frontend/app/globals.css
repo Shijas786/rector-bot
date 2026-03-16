@@ -7,28 +7,32 @@
 
 :root {
   /* Core palette - Conductor style */
-  --bg-primary: #0e0e10;
-  --bg-secondary: #141416;
-  --bg-tertiary: #1c1c1f;
-  --border: #27272a;
-  --border-hover: #3f3f46;
+  --bg-primary: #000000;
+  --bg-secondary: #0a0a0b;
+  --bg-tertiary: #111112;
+  --border: #1a1a1c;
+  --border-hover: #27272a;
+  
+  /* Binance Yellow Accent */
+  --yellow: #F0B90B;
+  --yellow-glow: rgba(240, 185, 11, 0.15);
 
   /* Text */
   --text-primary: #ffffff;
   --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
+  --text-muted: #52525b;
 
   /* Buttons & Accents */
-  --btn-bg: #ffffff;
+  --btn-bg: #F0B90B;
   --btn-text: #000000;
-  --btn-secondary-bg: #1f1f22;
-  --btn-secondary-hover: #27272a;
+  --btn-secondary-bg: #111112;
+  --btn-secondary-hover: #1a1a1c;
 
   /* Status Colors */
   --green: #2ecc71;
-  --green-bg: rgba(46, 204, 113, 0.15);
-  --red: #e74c3c;
-  --red-bg: rgba(231, 76, 60, 0.15);
+  --green-bg: rgba(46, 204, 113, 0.1);
+  --red: #ff4d4d;
+  --red-bg: rgba(255, 77, 77, 0.1);
   --orange: #f39c12;
 
   /* Fonts */
@@ -36,10 +40,10 @@
   --font-mono: 'JetBrains Mono', monospace;
 
   /* Sizing */
-  --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 32px;
 }
 
 *,
@@ -215,12 +219,15 @@ a:hover {
 
 /* ── Typography & Headlines ── */
 .hero-title {
-  font-size: 4.5rem;
-  font-weight: 700;
-  letter-spacing: -0.04em;
+  font-size: clamp(3rem, 10vw, 5rem);
+  font-weight: 800;
+  letter-spacing: -0.05em;
   text-align: center;
-  margin-bottom: 3rem;
-  line-height: 1.1;
+  margin-bottom: 2rem;
+  line-height: 1;
+  background: linear-gradient(to bottom, #fff 0%, #a1a1aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .section-title {
@@ -342,6 +349,94 @@ a:hover {
   font-size: 0.95rem;
   flex: 1;
 }
+
+/* ── Animations ── */
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker 40s linear infinite;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
+.claim-card {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  width: 320px;
+  flex-shrink: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 180px;
+  position: relative;
+  overflow: hidden;
+}
+
+.claim-card:hover {
+  border-color: var(--yellow);
+  box-shadow: 0 0 30px rgba(240, 185, 11, 0.05);
+  transform: translateY(-4px);
+}
+
+.claim-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 60px;
+  height: 60px;
+  background: radial-gradient(circle at top right, var(--yellow-glow), transparent 70%);
+  pointer-events: none;
+}
+
+.claim-card-text {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.claim-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+}
+
+.claim-card-source {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.claim-card-status {
+  font-size: 0.65rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.claim-card-status.true { background: var(--green-bg); color: var(--green); }
+.claim-card-status.false { background: var(--red-bg); color: var(--red); }
+.claim-card-status.pending { background: rgba(240, 185, 11, 0.1); color: var(--yellow); }
 
 .card-mono {
   font-family: var(--font-mono);

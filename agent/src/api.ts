@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import cors from "cors";
 import {
     handleMessage,
     handleAnalyse,
@@ -11,6 +12,7 @@ import { prisma } from "./db/prisma.js";
 import { mcpClient } from "./mcp/client.js";
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 // Request logging middleware
@@ -135,8 +137,56 @@ app.get("/predict-get", async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+ 
+// 4. List Predictions (for scrolling feed)
+app.get("/predictions", async (req, res) => {
+    try {
+        const predictions = await prisma.prediction.findMany({
+            orderBy: { id: "desc" },
+            take: 20,
+            include: {
+                user: {
+                    select: {
+                        username: true,
+                        telegramId: true
+                    }
+                }
+            }
+        });
+        res.json(predictions);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
-// 4. Full message handler (handles all commands)
+// 5. Get Single Prediction Detail
+app.get("/predictions/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const prediction = await prisma.prediction.findUnique({
+            where: { id: parseInt(id) },
+            include: {
+                user: {
+                    select: {
+                        username: true,
+                        telegramId: true,
+                        shadowAddress: true
+                    }
+                }
+            }
+        });
+
+        if (!prediction) {
+            return res.status(404).json({ error: "Prediction not found" });
+        }
+
+        res.json(prediction);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 6. Full message handler (handles all commands)
 app.post("/message", async (req, res) => {
     try {
         const { telegramId, username, text } = req.body;

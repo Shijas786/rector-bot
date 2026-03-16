@@ -1,77 +1,128 @@
-import type { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Rector Oracle",
-  description: "Agentic Verification via OpenClaw Runbooks.",
-};
+import { useEffect, useState } from "react";
+import Link from "next/link";
+
+interface Prediction {
+  id: number;
+  disambiguated: string;
+  status: "PENDING" | "TRUE" | "FALSE" | "INCONCLUSIVE";
+  createdAt: string;
+  user?: {
+    username: string;
+    telegramId: string;
+  };
+}
 
 export default function HomePage() {
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("http://localhost:3001/predictions")
+      .then((res) => res.json())
+      .then((data) => {
+        setPredictions(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch predictions:", err);
+        setLoading(false);
+      });
+  }, []);
+
   return (
-    <div className="container" style={{ paddingBottom: "2rem" }}>
+    <div className="container" style={{ paddingBottom: "6rem" }}>
       {/* ── Hero Section ── */}
-      <div className="mt-8 mb-8" style={{ marginTop: "6rem" }}>
-        <h1 className="hero-title">Agentic Verification</h1>
+      <section className="text-center" style={{ marginTop: "10vh", marginBottom: "15vh" }}>
+        <div className="btn-badge mb-4">PLAY WITH THE FUTURE</div>
+        <h1 className="hero-title">Rector Claims</h1>
+        <p style={{ color: "var(--text-secondary)", maxWidth: "600px", margin: "0 auto 3rem auto", fontSize: "1.1rem" }}>
+          The world's first agentic verification engine. Turn your words into on-chain proofs with high-fidelity AI runbooks.
+        </p>
 
         <div className="logic-block">
           <div className="logic-row">
             <span className="logic-label">If</span>
             <div className="logic-input">
               <div className="pfp-sm" style={{ background: "linear-gradient(135deg, #F3BA2F, #e2a822)" }}></div>
-              <span>user merges PR to bnb-chain</span>
+              <span>BTC hits $100k</span>
             </div>
           </div>
           <div className="logic-row">
-            <span className="logic-label">Then</span>
+            <span className="logic-label">Result</span>
             <div className="logic-input">
-              <div className="pfp-sm" style={{ background: "linear-gradient(135deg, #627EEA, #4a66d1)" }}></div>
-              <span>execute bounty payout on BSC</span>
+              <div className="pfp-ai">AI</div>
+              <span>Resolved Verified Proof</span>
             </div>
           </div>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "center", gap: "1rem", marginBottom: "6rem" }}>
-          <a href="/predictions/47" className="btn btn-primary">Create Runbook</a>
+        <div style={{ display: "flex", justifyContent: "center", gap: "1rem" }}>
+          <a href="https://t.me/RectorBot" className="btn btn-primary">Start Claiming</a>
+          <a href="#feed" className="btn btn-secondary">Explore Live Feed</a>
         </div>
-      </div>
+      </section>
 
-      <div className="text-center mb-4">
-        <span className="btn-badge">USE CASES</span>
-      </div>
-      <h2 className="section-title" style={{ fontSize: "2.5rem", marginBottom: "3rem" }}>
-        Resolve Prediction Markets, Bounties, and Wills
-      </h2>
-
-      {/* ── Horizontal Scrolling Ticker ── */}
-      <div className="carousel-wrapper">
-        <div className="carousel-container">
-          <div className="scroll-card">
-            <div className="scroll-card-image-placeholder"></div>
-            <div className="scroll-card-title">M5 MacBook Pro Claim</div>
-          </div>
-
-          <div className="scroll-card" style={{ background: "linear-gradient(to bottom, #111, #0a0a0c)" }}>
-            <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", fontSize: "1.5rem", fontWeight: "700" }}>
-              @ConductorBot_
-            </div>
-            <div className="scroll-card-title">@ConductorBot_ Claim</div>
-          </div>
-
-          <div className="scroll-card" style={{ background: "linear-gradient(to bottom, #2a2a2c, #1a1a1c)" }}>
-            <div style={{ position: "absolute", top: "30%", left: "10%", right: "10%", background: "#0e0e10", border: "1px solid #3f3f46", borderRadius: "8px", padding: "1rem", fontFamily: "var(--font-mono)", fontSize: "0.8rem", color: "var(--green)" }}>
-              &gt; npm run resolve <br />
-              &gt; verifying onchain...<br />
-              &gt; status: true
-            </div>
-            <div className="scroll-card-title">Automated Bounties</div>
-          </div>
-
-          <div className="scroll-card">
-            <div style={{ position: "absolute", top: "2rem", left: "50%", transform: "translateX(-50%)", width: "60px", height: "60px", borderRadius: "50%", background: "linear-gradient(135deg, #F3BA2F, #e2a822)" }}></div>
-            <div className="scroll-card-title">Crypto Price Feeds</div>
+      {/* ── Scrolling Live Ticker ── */}
+      <div id="feed" className="mb-8">
+        <div className="logic-label mb-4" style={{ letterSpacing: "0.2em", textIndent: "2.5rem" }}>LIVE FEED</div>
+        
+        <div className="carousel-wrapper">
+          <div className="ticker-track">
+            {predictions.map((p) => (
+              <Link key={p.id} href={`/predictions/${p.id}`} className="claim-card">
+                <div className="claim-card-text">{p.disambiguated}</div>
+                <div className="claim-card-meta">
+                  <span className="claim-card-source">ID #{p.id}</span>
+                  <span className={`claim-card-status ${p.status.toLowerCase()}`}>{p.status}</span>
+                </div>
+              </Link>
+            ))}
+            {/* Duplicate for infinite effect */}
+            {predictions.map((p) => (
+              <Link key={`dup-${p.id}`} href={`/predictions/${p.id}`} className="claim-card">
+                <div className="claim-card-text">{p.disambiguated}</div>
+                <div className="claim-card-meta">
+                  <span className="claim-card-source">ID #{p.id}</span>
+                  <span className={`claim-card-status ${p.status.toLowerCase()}`}>{p.status}</span>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </div>
 
+      {/* ── List View for Mobile/Table ── */}
+      <div className="table-container mt-8">
+        <table>
+          <thead>
+            <tr>
+              <th>Claim</th>
+              <th>Status</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={3} className="text-center">Loading live claims...</td></tr>
+            ) : predictions.length === 0 ? (
+              <tr><td colSpan={3} className="text-center">No claims found. Start a claim on Telegram!</td></tr>
+            ) : (
+              predictions.map((p) => (
+                <tr key={p.id} onClick={() => window.location.href = `/predictions/${p.id}`} style={{ cursor: 'pointer' }}>
+                  <td>{p.disambiguated.substring(0, 80)}...</td>
+                  <td>
+                    <span className={`claim-card-status ${p.status.toLowerCase()}`}>{p.status}</span>
+                  </td>
+                  <td className="mono" style={{ fontSize: '0.75rem' }}>{new Date(p.createdAt).toLocaleDateString()}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
+

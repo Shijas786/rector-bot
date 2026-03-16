@@ -1,157 +1,134 @@
-import type { Metadata } from "next";
+"use client";
 
-// Mock prediction data
-const predictionsData: Record<number, {
-    id: number;
-    trader: string;
-    claim: string;
-    disambiguated: string;
-    submitted: string;
-    resolves: string;
-    resolvedAt: string;
-    status: "PENDING" | "TRUE" | "FALSE" | "INCONCLUSIVE";
-    contractAddress: string;
-    evidenceJson: string;
-}> = {
-    47: {
-        id: 47,
-        trader: "trader_x",
-        claim: "BNB hits $1000 by Dec 2026",
-        disambiguated: "BNB/USD spot price will close above $1,000 on Binance on or before Dec 31, 2026 23:59 UTC",
-        submitted: "Mar 6, 2026",
-        resolves: "Dec 31, 2026",
-        resolvedAt: "2026-12-31 23:59 UTC",
-        status: "FALSE",
-        contractAddress: "0x1234567890abcdef1234567890abcdef12345678",
-        evidenceJson: `{
-  "outcome": "NO",
-  "resolved_at": "2026-12-31T23:59:00Z",
-  "evidence": [
-    "Binance API (api.binance.com) fetched 2026-12-31T23:59:00Z states BNB/USDT spot price is $985.40",
-    "Chainlink BSC Feed (0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE) states BNB/USD is $985.55"
-  ],
-  "reasoning": "The claim demands BNB/USD close above $1,000. All data sources confirm it closed below that mark."
-}`,
-    },
-};
+import { useEffect, useState } from "react";
+import Link from "next/link";
 
-const defaultPrediction = {
-    id: 0,
-    trader: "unknown",
-    claim: "Sample prediction",
-    disambiguated: "Sample disambiguated prediction text",
-    submitted: "Jan 1, 2026",
-    resolves: "Dec 31, 2026",
-    resolvedAt: "Pending",
-    status: "PENDING" as const,
-    contractAddress: "0x0000000000000000000000000000000000000000",
-    evidenceJson: "{\n  \"status\": \"waiting for expiry\"\n}",
-};
-
-export async function generateMetadata({
-    params,
-}: {
-    params: { id: string };
-}): Promise<Metadata> {
-    const { id } = params;
-    const prediction = predictionsData[parseInt(id)] || defaultPrediction;
-    return {
-        title: `Claim #${id} — Rector`,
-        description: prediction.disambiguated,
-    };
+interface Prediction {
+  id: number;
+  claim: string;
+  disambiguated: string;
+  runbookMarkdown: string;
+  evidenceJson: string;
+  status: "PENDING" | "TRUE" | "FALSE" | "INCONCLUSIVE";
+  createdAt: string;
+  resolutionTimestamp?: string;
+  txHash?: string;
+  user?: {
+    username: string;
+    shadowAddress: string;
+  };
 }
 
-export default function PredictionPage({
-    params,
-}: {
-    params: { id: string };
-}) {
-    const { id } = params;
-    const prediction = predictionsData[parseInt(id)] || { ...defaultPrediction, id: parseInt(id) };
+export default function PredictionPage({ params }: { params: { id: string } }) {
+  const [prediction, setPrediction] = useState<Prediction | null>(null);
+  const [loading, setLoading] = useState(true);
 
-    // Translate TRUE/FALSE to YES/NO for the massive pill
-    const getPillText = (status: string) => {
-        if (status === "TRUE") return "YES";
-        if (status === "FALSE") return "NO";
-        return "PENDING";
-    };
+  useEffect(() => {
+    fetch(`http://localhost:3001/predictions/${params.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setPrediction(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch prediction:", err);
+        setLoading(false);
+      });
+  }, [params.id]);
 
-    const pillClass = prediction.status.toLowerCase();
+  if (loading) return <div className="container text-center" style={{ marginTop: "20vh" }}>Loading claim #{params.id}...</div>;
+  if (!prediction) return <div className="container text-center" style={{ marginTop: "20vh" }}>Claim not found.</div>;
 
-    return (
-        <div className="container" style={{ maxWidth: "800px" }}>
+  const getStatusColor = (status: string) => {
+    if (status === "TRUE") return "var(--green)";
+    if (status === "FALSE") return "var(--red)";
+    return "var(--yellow)";
+  };
 
-            {/* ── Header Area ── */}
-            <div className="mb-8 mt-8">
-                <div className="logic-label mb-2" style={{ letterSpacing: "0.1em" }}>CLAIM</div>
-                <h1 className="hero-title" style={{ textAlign: "left", fontSize: "2.5rem", letterSpacing: "-0.02em", marginBottom: "2.5rem" }}>
-                    {prediction.disambiguated}
-                </h1>
+  return (
+    <div className="container" style={{ maxWidth: "800px", paddingBottom: "6rem" }}>
+      {/* ── Claim Header ── */}
+      <div className="mb-8 mt-8">
+        <div className="logic-label mb-2" style={{ letterSpacing: "0.2em" }}>CLAIM #{prediction.id}</div>
+        <h1 className="hero-title" style={{ textAlign: "left", fontSize: "clamp(2rem, 5vw, 3.5rem)", marginBottom: "2rem" }}>
+          {prediction.disambiguated}
+        </h1>
 
-                <div className="logic-label mb-2" style={{ letterSpacing: "0.1em" }}>CURRENT STATUS</div>
-                <div className={`status-pill-massive ${pillClass}`}>
-                    {getPillText(prediction.status)}
-                </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: "1rem", color: "var(--text-secondary)", fontSize: "0.95rem" }}>
-                    <span>Resolve {prediction.resolves}</span>
-                    <span className="btn-badge-dark">✓ Attested</span>
-                </div>
+        <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", padding: "1.5rem 0" }}>
+          <div className="stat-item">
+            <div className="stat-label">STATUS</div>
+            <div className="stat-value" style={{ color: getStatusColor(prediction.status), fontSize: "1.5rem" }}>
+              {prediction.status === "PENDING" ? "RESOLVING..." : prediction.status}
             </div>
-
-            {/* ── Verification Box ── */}
-            <div className="card mb-4" style={{ padding: 0 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.5rem 2rem", borderBottom: "1px solid var(--border)" }}>
-                    <h3 className="card-title" style={{ fontSize: "1.25rem", margin: 0 }}>Verification</h3>
-                    <button className="btn btn-primary" style={{ fontSize: "0.85rem", padding: "0.5rem 1rem" }}>Join to Run Verification</button>
-                </div>
-
-                <div style={{ padding: "1.5rem 2rem", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer" }}>
-                    <span style={{ color: "var(--text-secondary)" }}>📋</span>
-                    <span style={{ fontWeight: 600 }}>Details</span>
-                    <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--text-muted)" }}>▼</span>
-                </div>
-
-                <div style={{ padding: "2rem" }}>
-                    <div className="logic-label mb-4" style={{ letterSpacing: "0.1em" }}>LOG</div>
-
-                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "1rem", color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: "2rem", fontFamily: "var(--font-mono)" }}>
-                        <span>{prediction.resolvedAt} • <span style={{ background: "var(--red)", color: "#fff", padding: "2px 6px", borderRadius: "12px", fontSize: "0.7rem", fontWeight: "bold" }}>{getPillText(prediction.status)}</span></span>
-                        <span style={{ color: "var(--text-secondary)", cursor: "pointer" }}>Save Onchain →</span>
-                    </div>
-
-                    <div style={{ display: "flex", alignItems: "flex-start" }}>
-                        <div className="pfp-ai">AI</div>
-                        <div className="card-mono" style={{ flex: 1, border: "none", background: "transparent", padding: 0 }}>
-                            <span style={{ color: "var(--text-muted)" }}>```json</span><br />
-                            {prediction.evidenceJson}<br />
-                            <span style={{ color: "var(--text-muted)" }}>```</span>
-                        </div>
-                    </div>
-
-                    <div style={{ marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px solid var(--border)", textAlign: "center" }}>
-                        <span className="hover-text-primary" style={{ color: "var(--text-muted)", fontSize: "0.85rem", cursor: "pointer", transition: "color 0.2s" }}>Expand Logs</span>
-                    </div>
-                </div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-label">SUBMITTED</div>
+            <div className="stat-value" style={{ fontSize: "1.5rem" }}>
+              {new Date(prediction.createdAt).toLocaleDateString()}
             </div>
-
-            {/* ── Trigger Box ── */}
-            <div className="card" style={{ padding: "0" }}>
-                <div style={{ padding: "1.5rem 2rem", borderBottom: "1px solid var(--border)" }}>
-                    <h3 className="card-title" style={{ fontSize: "1.25rem", margin: 0 }}>Trigger</h3>
-                </div>
-                <div style={{ padding: "2rem", textAlign: "center", color: "var(--text-secondary)", fontSize: "0.95rem" }}>
-                    Escrow funds when this claim resolves or connect it to your own smart contract. <a href="#" style={{ textDecoration: "underline" }}>Learn more</a>
-                </div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-label">ATTESTOR</div>
+            <div className="stat-value" style={{ fontSize: "1.5rem", color: "var(--yellow)" }}>
+              AI ORACLE
             </div>
-
-            <div style={{ marginTop: "6rem", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
-                <div style={{ width: "24px", height: "36px", border: "2px solid var(--text-primary)", borderRadius: "12px", position: "relative" }}>
-                    <div style={{ width: "4px", height: "8px", background: "var(--text-primary)", borderRadius: "2px", position: "absolute", top: "4px", left: "50%", transform: "translateX(-50%)" }}></div>
-                </div>
-                <div style={{ fontSize: "1.5rem", fontWeight: 600 }}>@ConductorBot_</div>
-            </div>
-
+          </div>
         </div>
-    );
+      </div>
+
+      {/* ── Verification Runbook ── */}
+      <div className="mb-8">
+        <div className="logic-label mb-4" style={{ letterSpacing: "0.2em" }}>VERIFICATION RUNBOOK</div>
+        <div className="card-mono" style={{ background: "var(--bg-secondary)", padding: "2rem", fontSize: "0.9rem", lineHeight: "1.8", border: "1px solid var(--border)" }}>
+          {prediction.runbookMarkdown ? (
+            <div style={{ whiteSpace: "pre-wrap" }}>{prediction.runbookMarkdown}</div>
+          ) : (
+            <span style={{ color: "var(--text-muted)" }}>Agentic runbook generation in progress...</span>
+          )}
+        </div>
+      </div>
+
+      {/* ── Proof of Resolution ── */}
+      {prediction.status !== "PENDING" && (
+        <div className="mb-8">
+          <div className="logic-label mb-4" style={{ letterSpacing: "0.2em" }}>ON-CHAIN PROOF</div>
+          <div className="card" style={{ padding: "1.5rem", background: "var(--bg-tertiary)" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span className="mono" style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>EVIDENCE STORE</span>
+                <span className="btn-badge-dark" style={{ border: "1px solid var(--green)", color: "var(--green)" }}>✓ GREENFIELD</span>
+              </div>
+              
+              <div className="card-mono" style={{ background: "var(--bg-primary)", padding: "1rem", fontSize: "0.75rem", overflowX: "auto" }}>
+                {prediction.evidenceJson}
+              </div>
+
+              {prediction.txHash && (
+                <div style={{ marginTop: "1rem" }}>
+                  <a 
+                    href={`https://testnet.bscscan.com/tx/${prediction.txHash}`} 
+                    target="_blank" 
+                    rel="noopener" 
+                    className="btn btn-secondary w-full"
+                    style={{ width: "100%", justifyContent: "center", border: "1px solid var(--yellow)", color: "var(--yellow)" }}
+                  >
+                    View BscScan Proof
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Footer Link ── */}
+      <div className="text-center mt-8">
+        <Link href="/" style={{ color: "var(--text-muted)", fontSize: "0.9rem", textDecoration: "underline" }}>
+          ← Back to Claims Feed
+        </Link>
+      </div>
+
+    </div>
+  );
 }
+

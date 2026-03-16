@@ -25,29 +25,21 @@ export default function RootLayout({
       <body>
         <TelegramInit />
 
-        <div className="app-container">
-          {/* Left Vertical Sidebar */}
-          <aside className="sidebar">
-            <div className="sidebar-icon">＋</div>
-            <div className="sidebar-icon">ⓘ</div>
-          </aside>
+        <div className="app-container" style={{ display: 'block' }}>
+          {/* Top Navigation */}
+          <nav className="top-nav">
+            <a href="/" className="logo">Rector</a>
 
-          {/* Main Content Area */}
-          <div className="main-content">
-            <nav className="top-nav">
-              <a href="/" className="logo">Rector</a>
+            <div className="nav-actions">
+              <a href="https://t.me/RectorBot" target="_blank" rel="noopener" className="btn btn-secondary">
+                <span style={{ display: 'inline-block', width: '8px', height: '8px', background: 'var(--yellow)', borderRadius: '50%', marginRight: '8px' }}></span>
+                LIVE BOT
+              </a>
+              <a href="/" className="btn btn-primary" style={{ color: '#000' }}>Explore</a>
+            </div>
+          </nav>
 
-              <div className="nav-actions">
-                <a href="https://t.me/RectorBot" target="_blank" rel="noopener" className="btn btn-secondary">
-                  <span style={{ display: 'inline-block', width: '8px', height: '8px', background: 'var(--text-primary)', borderRadius: '50%', marginRight: '8px' }}></span>
-                  BOT MODE
-                </a>
-                <a href="/profile/trader_x" className="btn btn-primary">Sign in</a>
-              </div>
-            </nav>
-
-            <main>{children}</main>
-          </div>
+          <main>{children}</main>
         </div>
       </body>
     </html>
