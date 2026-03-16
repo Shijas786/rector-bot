@@ -26,8 +26,21 @@ echo "=== Skills Cleanup ==="
 rm -rf "$WORKSPACE_DIR/skills/bnbchain-mcp-skill"
 echo "Conflicting skills removed"
 
-# Step 2: Write openclaw.json
+# Failsafe: Ensure agent dependencies and build are present
+if [ ! -d "/app/agent/dist" ]; then
+    echo "Failsafe: Building agent..."
+    cd /app/agent && npm install && npx prisma generate && npm run build
+    cd /
+fi
+
+# Step 3: Run doctor FIRST to setup system, but we will overwrite its config
+echo "=== Running OpenClaw Doctor ==="
+npx openclaw doctor --fix 2>&1 || true
+
+# Step 4: Write FINAL openclaw.json (Overwriting whatever doctor did)
+echo "=== Writing Final openclaw.json ==="
 mkdir -p /root/.openclaw
+rm -f /root/.openclaw/mcp.json
 cat > "/root/.openclaw/openclaw.json" << EOF
 {
   "agents": {
@@ -52,6 +65,7 @@ cat > "/root/.openclaw/openclaw.json" << EOF
       "pathPrepend": ["/usr/local/bin", "/usr/bin", "/bin", "/app/node_modules/.bin"]
     }
   },
+  "mcp": {},
   "channels": {
     "telegram": {
       "botToken": "${TELEGRAM_BOT_TOKEN}",
@@ -73,24 +87,11 @@ cat > "/root/.openclaw/openclaw.json" << EOF
 }
 EOF
 
-# Fix permissions for doctor
-chmod 700 /root/.openclaw
-
-# Failsafe: Ensure agent dependencies and build are present
-if [ ! -d "/app/agent/dist" ]; then
-    echo "Failsafe: Building agent..."
-    cd /app/agent && npm install && npx prisma generate && npm run build
-    cd /
-fi
-
-# Step 3: Doctor fix
-npx openclaw doctor --fix 2>&1 || true
-
 # Show final config for debugging
-echo "=== UPDATED CONFIG ==="
+echo "=== FINAL CONFIG ==="
 cat /root/.openclaw/openclaw.json
 
-# Step 4: Start gateway
+# Step 5: Start gateway
 npx openclaw gateway run --port 18789 &
 GATEWAY_PID=$!
 
