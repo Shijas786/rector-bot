@@ -148,7 +148,13 @@ node -e "
 echo "=== ACTIVE SOUL.md DUMP ==="
 cat /root/.openclaw/agents/main/agent/SOUL.md
 
-# Step 6: Parse the JSONL log and dump ALL message content
+# Step 6: Fix Greenfield reed-solomon BUG (hardcoded path in 1.5.0)
+echo "=== Fixing Greenfield reed-solomon path bug ==="
+FIX_DIR="/home/runner/work/bnbchain-mcp/bnbchain-mcp/node_modules/@bnb-chain/reed-solomon/dist"
+mkdir -p "$FIX_DIR"
+ln -sf /app/agent/node_modules/@bnb-chain/reed-solomon/dist/sub-worker.js "$FIX_DIR/sub-worker.js"
+
+# Step 7: Parse the JSONL log and dump ALL message content
 echo "=== FULL GATEWAY LOG (parsed) ==="
 node -e "
 const fs = require('fs');
