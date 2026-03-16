@@ -228,6 +228,7 @@ export async function executePredictionPipeline(
 ✓ Prediction #${predictionId} live on BSC
 ✓ TX: https://testnet.bscscan.com/tx/${txHash}`;
     } catch (error: any) {
+        console.error(`[Pipeline Error] Failed for user ${userId} / claim: ${disambiguation.disambiguated}`, error);
         return `❌ Error: ${error.message}`;
     }
 }

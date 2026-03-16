@@ -1,4 +1,5 @@
 #!/bin/sh
+# Rector Core Version: 2.1.2
 
 # Setup workspace
 export WORKSPACE_DIR="/root/.openclaw/workspace"

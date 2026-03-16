@@ -127,9 +127,13 @@ app.get("/predict-get", async (req, res) => {
             });
         }
 
+        console.log(`[API] Processing prediction for user ${telegramId}: ${claimText}`);
         const resolutionDate = extractResolutionDate(claimText);
+        console.log(`[API] Extracted resolution date: ${resolutionDate.toISOString()}`);
         const disambiguation = await disambiguatePrediction(claimText, resolutionDate);
+        console.log(`[API] Disambiguation complete: ${disambiguation.disambiguated}`);
         const resultMessage = await executePredictionPipeline(user!.id, String(telegramId), disambiguation);
+        console.log(`[API] Pipeline execution complete`);
 
         res.json({ message: resultMessage });
     } catch (error: any) {
