@@ -147,20 +147,25 @@ function parseRunbookSteps(markdown: string): ParsedStep[] {
         const id = parseInt(match[1]);
         const body = match[2];
 
-        const typeMatch = body.match(/Type\*?:\s*(\w+)/i);
-        const sourceMatch = body.match(/Source\*?:\s*(https?:\/\/[^\s]+|0x[a-fA-F0-9]+)/i);
+        const typeMatch = body.match(/(?:Type|\*\*Type\*\*)\*?:\s*(\w+)/i);
+        
+        // Permissive source matching: Source:, **Source:**, or 1. **Fetch Data**:
+        const sourceMatch = body.match(/(?:Source|\*\*Source\*\*|Fetch Data)\*?:\s*(https?:\/\/[^\s\n]+|0x[a-fA-F0-9]+)/i);
+        
         const contractMatch = body.match(/Contract\*?:\s*(0x[a-fA-F0-9]+)/i);
         const extractMatch = body.match(/Extract\*?:\s*(.+)/i);
-        const successMatch = body.match(/Success\*?:\s*(.+)/i);
+        
+        // Permissive success matching: Success:, **Success:**, or 3. **Apply Criteria**:
+        const successMatch = body.match(/(?:Success|\*\*Success\*\*|Apply Criteria)\*?:\s*(.+)/i);
 
         // Extract Polymarket Event ID if present in source URL
         const eventIdMatch = sourceMatch?.[1]?.match(/events\/(\d+)/);
 
         steps.push({
             id,
-            type: typeMatch?.[1] || "unknown",
-            source: sourceMatch?.[1] || contractMatch?.[1] || "",
-            contract: contractMatch?.[1],
+            type: typeMatch?.[1]?.trim().toLowerCase() || "unknown",
+            source: sourceMatch?.[1]?.trim() || contractMatch?.[1]?.trim() || "",
+            contract: contractMatch?.[1]?.trim(),
             eventId: eventIdMatch ? eventIdMatch[1] : undefined,
             extract: extractMatch?.[1]?.trim(),
             successCondition: successMatch?.[1]?.trim(),
