@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import path from "path";
 import {
     handleMessage,
     handleAnalyse,
@@ -17,18 +18,20 @@ app.use(express.json());
 
 // Request logging middleware
 app.use((req, res, next) => {
-    console.log(`[API] ${req.method} ${req.url} - Body: ${JSON.stringify(req.body)} - Query: ${JSON.stringify(req.query)}`);
+    console.log(`[API] ${req.method} ${req.url}`);
     next();
+});
+
+// Process-level error handling to keep the service alive
+process.on("unhandledRejection", (reason, promise) => {
+    console.error(`[FATAL] Unhandled Rejection at:`, promise, "reason:", reason);
+});
+process.on("uncaughtException", (err) => {
+    console.error(`[FATAL] Uncaught Exception:`, err);
 });
 
 const PORT = process.env.AGENT_API_PORT || 3001;
 
-// Connect MCP client on startup
-mcpClient.connect().then(() => {
-    console.log("[API] MCP client connected");
-}).catch((err: Error) => {
-    console.error("[API] MCP client failed to connect:", err.message);
-});
 
 // Health check
 app.get("/health", (_req, res) => {
@@ -204,6 +207,19 @@ app.post("/message", async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 Rector Agent API running on port ${PORT}`);
-});
+const startServer = async () => {
+    try {
+        console.log("[API] Connecting to MCP...");
+        await mcpClient.connect();
+        console.log("[API] MCP client connected");
+        
+        app.listen(PORT, () => {
+            console.log(`🚀 Rector Agent API running on port ${PORT}`);
+        });
+    } catch (err: any) {
+        console.error("[API] Failed to start:", err.message);
+        process.exit(1);
+    }
+};
+
+startServer();

@@ -106,8 +106,15 @@ echo "Agent API PID: $API_PID"
 cd /
 
 # Wait for API server to be ready
-sleep 5
-node -e "require('http').get('http://localhost:3001/health', r => { console.log('Agent API is UP! status=' + r.statusCode); }).on('error', e => { console.log('WARNING: Agent API not responding:', e.message); });" 2>/dev/null || true
+echo "Waiting for Rector Agent API to be ready..."
+for i in $(seq 1 10); do
+    if curl -s http://127.0.0.1:3001/health | grep -q "ok"; then
+        echo "Agent API is UP!"
+        break
+    fi
+    echo "Still waiting for API (attempt $i)..."
+    sleep 3
+done
 
 # Start auto-resolution cron
 echo "Rector live. PID: $GATEWAY_PID"
@@ -126,7 +133,7 @@ which curl || echo "ERROR: curl not found"
 echo "--- Testing Bridge Connectivity ---"
 node -e "
   const http = require('http');
-  const req = http.get('http://localhost:3001/health', res => {
+  const req = http.get('http://127.0.0.1:3001/health', res => {
     console.log('✅ BRIDGE SUCCESS: API responded with ' + res.statusCode);
     process.exit(0);
   });
