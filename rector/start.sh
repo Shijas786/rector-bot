@@ -65,7 +65,6 @@ cat > "/root/.openclaw/openclaw.json" << EOF
       "pathPrepend": ["/usr/local/bin", "/usr/bin", "/bin", "/app/node_modules/.bin"]
     }
   },
-  "mcp": {},
   "channels": {
     "telegram": {
       "botToken": "${TELEGRAM_BOT_TOKEN}",
