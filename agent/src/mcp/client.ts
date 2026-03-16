@@ -32,7 +32,7 @@ export class MCPClient {
         if (this.process) return; // Prevent multiple connections
         
         console.log("[MCP] Spawning client process...");
-        this.process = spawn("./node_modules/.bin/bnbchain-mcp", [], {
+        this.process = spawn("npx", ["--no-install", "bnbchain-mcp"], {
             stdio: ["pipe", "pipe", "pipe"],
             env: {
                 ...process.env,

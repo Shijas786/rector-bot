@@ -147,11 +147,11 @@ function parseRunbookSteps(markdown: string): ParsedStep[] {
         const id = parseInt(match[1]);
         const body = match[2];
 
-        const typeMatch = body.match(/Type:\s*(\w+)/);
-        const sourceMatch = body.match(/Source:\s*(https?:\/\/[^\s]+)/);
-        const contractMatch = body.match(/Contract:\s*(0x[a-fA-F0-9]+)/);
-        const extractMatch = body.match(/Extract:\s*(.+)/);
-        const successMatch = body.match(/Success:\s*(.+)/);
+        const typeMatch = body.match(/Type\*?:\s*(\w+)/i);
+        const sourceMatch = body.match(/Source\*?:\s*(https?:\/\/[^\s]+|0x[a-fA-F0-9]+)/i);
+        const contractMatch = body.match(/Contract\*?:\s*(0x[a-fA-F0-9]+)/i);
+        const extractMatch = body.match(/Extract\*?:\s*(.+)/i);
+        const successMatch = body.match(/Success\*?:\s*(.+)/i);
 
         // Extract Polymarket Event ID if present in source URL
         const eventIdMatch = sourceMatch?.[1]?.match(/events\/(\d+)/);
