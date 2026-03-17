@@ -260,10 +260,15 @@ export async function executePredictionPipeline(
             runbookRef
         );
 
-        return `🛡 **RECTOR ORACLE: PROTOCOL INITIATED** 🚀
+        return `🏆 **RECTOR: TRANSACTION CONFIRMED** 🚀
+━━━━━━━━━━━━━━━━━━━━━━━━
+📜 **History Entry:** #${predictionId}
+🛡 **Protocol:** Rector Oracle
+🎯 **Status:** ON-CHAIN ATTESTED
+━━━━━━━━━━━━━━━━━━━━━━━━
 
 ✅ **RUNBOOK:** [View on BNB Greenfield](${runbookRef})
-✅ **PREDICTION # ${predictionId}:** [LIVE ON BSC](https://testnet.bscscan.com/tx/${txHash})
+✅ **PROOF:** [LIVE ON BSC](https://testnet.bscscan.com/tx/${txHash})
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 🌐 **OFFICIAL DASHBOARD:**
@@ -282,6 +287,27 @@ async function handleCheck(id: number): Promise<string> {
     if (!p) return `❌ Prediction #${id} not found.`;
     const status = p.status === "RESOLVED" ? (p.outcome ? "✅ TRUE" : "❌ FALSE") : `⏳ ${p.status}`;
     return `📜 **PREDICTION #${id}**\n\nClaim: ${p.claimText}\nStatus: ${status}\nResolves: ${p.resolutionDate.toISOString().split("T")[0]}\n🔗 [View Details](${FRONTEND_URL}/predictions/${id})\n🔗 [On-chain Proof](https://testnet.bscscan.com/tx/${p.txHashSubmit})`;
+}
+
+async function handleHistory(userId: string): Promise<string> {
+    const predictions = await prisma.prediction.findMany({
+        where: { userId },
+        orderBy: { id: "desc" },
+        take: 5
+    });
+
+    if (predictions.length === 0) return "📭 You haven't made any predictions yet. Try just typing one, like 'BTC hits 100k next week'!";
+
+    const list = predictions.map(p => {
+        const icon = p.status === "RESOLVED" ? (p.outcome ? "✅" : "❌") : "⏳";
+        return `${icon} **#${p.onchainId}**: ${p.claimText.substring(0, 50)}...`;
+    }).join("\n");
+
+    return `📜 **YOUR PREDICTION HISTORY** 🛡️
+    
+${list}
+
+🔗 [View Full Feed](${FRONTEND_URL}/live)`;
 }
 
 function handleHelp(shadowAddress?: string): string {
