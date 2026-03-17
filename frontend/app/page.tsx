@@ -18,30 +18,43 @@ function RunbookPreview({ text }: { text: string }) {
   // Clean up markdown code blocks if present
   const cleanText = text.replace(/```markdown\n|```/g, "").trim();
   
-  // Simple extraction logic for the design requirements
+  // Structured extraction
   const runbookId = cleanText.match(/RunbookID: ([^\s\n]+)/)?.[1] || "N/A";
   const createdAt = cleanText.match(/CreatedAt: ([^\s\n]+)/)?.[1] || "N/A";
   const resolveAt = cleanText.match(/ResolveAt: ([^\s\n]+)/)?.[1] || "N/A";
+  const predictionId = cleanText.match(/PredictionID: ([^\s\n]+)/)?.[1] || "N/A";
   
-  // Extract Decision - everything between ## Decision and next ##
+  // Extract Decision
   const decisionMatch = cleanText.match(/## Decision\n([\s\S]*?)(?=\n##|$)/);
   const decisionText = decisionMatch ? decisionMatch[1].trim() : "N/A";
-
-  const shortId = runbookId.split('-')[1]?.substring(0, 8) || runbookId.substring(0, 10);
 
   return (
     <div className="runbook-preview-card">
       <div className="runbook-preview-header">
-        <span className="runbook-preview-label">RUNBOOK #{shortId}</span>
+        <span className="runbook-preview-label">VERIFICATION REPORT</span>
         <div className="runbook-tag">READY</div>
       </div>
       
-      <ul className="runbook-metadata">
-        <li><span className="label">Created:</span> {new Date(createdAt).toLocaleDateString()}</li>
-        <li><span className="label">Resolve:</span> {new Date(resolveAt).toLocaleDateString()}</li>
-      </ul>
+      <div className="runbook-metadata-grid">
+        <div className="runbook-meta-item">
+          <span className="label">Runbook ID</span>
+          <span className="value">{runbookId}</span>
+        </div>
+        <div className="runbook-meta-item">
+          <span className="label">Prediction ID</span>
+          <span className="value">{predictionId}</span>
+        </div>
+        <div className="runbook-meta-item">
+          <span className="label">Created At</span>
+          <span className="value">{new Date(createdAt).toLocaleString()}</span>
+        </div>
+        <div className="runbook-meta-item">
+          <span className="label">Resolution</span>
+          <span className="value">{new Date(resolveAt).toLocaleString()}</span>
+        </div>
+      </div>
 
-      <div className="runbook-section-title">Decision</div>
+      <div className="runbook-section-title">Decision Analysis</div>
       <div className="runbook-decision-box">
         <p>{decisionText}</p>
       </div>
