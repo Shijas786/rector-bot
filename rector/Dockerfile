@@ -18,6 +18,7 @@ COPY rector/ /app/rector/
 WORKDIR /app/agent
 RUN npm install --include=dev
 RUN npx prisma generate
+RUN npm run build
 
 # Start script
 WORKDIR /app/rector
