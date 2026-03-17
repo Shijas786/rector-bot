@@ -47,7 +47,7 @@ cat > "/root/.openclaw/openclaw.json" << EOF
 {
   "agents": {
     "defaults": {
-      "model": { "primary": "openai/gpt-4o" },
+      "model": { "primary": "openai/gpt-4o-mini" },
       "workspace": "$WORKSPACE_DIR"
     }
   },
