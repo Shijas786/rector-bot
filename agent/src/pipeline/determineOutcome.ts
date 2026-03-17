@@ -73,6 +73,7 @@ Rules:
  */
 export function formatOutcome(
     predictionId: number,
+    dbId: number,
     outcome: OutcomeResult,
     txHash: string,
     correct: number,
@@ -87,7 +88,7 @@ Reasoning: ${outcome.reasoning}
 
 Onchain proof:
 🔗 [Onchain Proof](https://testnet.bscscan.com/tx/${txHash})
-🔗 [Full Details](${FRONTEND_URL}/predictions/${predictionId})`;
+🔗 [Full Details](${FRONTEND_URL}/predictions/${dbId})`;
     }
 
     const statusEmoji = outcome.outcome ? "✅" : "❌";
@@ -106,7 +107,7 @@ Onchain proof:
 
       Onchain proof:
       🔗 [Onchain Proof](https://testnet.bscscan.com/tx/${txHash})
-      🔗 [Full Details](${FRONTEND_URL}/predictions/${predictionId})
+      🔗 [Full Details](${FRONTEND_URL}/predictions/${dbId})
 
       Your record: ${correct}/${total} correct 🎯`;
 }

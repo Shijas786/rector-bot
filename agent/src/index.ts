@@ -279,7 +279,7 @@ export async function executePredictionPipeline(
             walletAddress
         );
 
-        await prisma.prediction.create({
+        const p = await prisma.prediction.create({
             data: {
                 onchainId: predictionId,
                 userId,
@@ -314,7 +314,7 @@ export async function executePredictionPipeline(
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 🌐 **OFFICIAL DASHBOARD:**
-[rector.up.railway.app/predictions/${predictionId}](https://rector.up.railway.app/predictions/${predictionId})
+[rector.up.railway.app/predictions/${p.id}](https://rector.up.railway.app/predictions/${p.id})
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
 *(Protocol execution synchronized. Monitor resolution in the dashboard)*`;

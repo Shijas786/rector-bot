@@ -132,6 +132,7 @@ export function startWorker(
                     const accuracy = await getAccuracy(prediction.user.telegramId);
                     const message = formatOutcome(
                         predictionId,
+                        prediction.id,
                         outcome,
                         txHash,
                         accuracy.correct,
