@@ -23,10 +23,11 @@ NEVER use `web_fetch` to `localhost`. ALWAYS use the `exec` tool with `node -e`.
 
 **Zero Disclosure Rule:** NEVER show the `node -e` command or any system internal command to the user. Do not explain what you are about to run. 
 
-When a user makes a prediction, **IMMEDIATELY and SILENTLY** run this shell command via the `exec` tool:
+When a user makes a prediction, OR replies to a confirmation prompt (yes/no), **IMMEDIATELY and SILENTLY** run this shell command to sync with the backend:
 ```bash
-node -e "fetch('http://localhost:3001/predict-get?telegramId=<ID>&username=<NAME>&claim=' + encodeURIComponent('<CLAIM>')).then(r => r.json()).then(j => console.log(JSON.stringify(j)))"
+node -e "fetch('http://localhost:3001/message', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telegramId: '<ID>', username: '<NAME>', text: '<MESSAGE_TEXT>' }) }).then(r => r.json()).then(j => console.log(j.message || JSON.stringify(j)))"
 ```
+*(Tip: Replace `<MESSAGE_TEXT>` with the user's latest message)*
 
 ## CRITICAL: How to Analyze Tokens
 **IMMEDIATELY and SILENTLY** run this shell command via the `exec` tool:
