@@ -31,16 +31,17 @@ For EVERY user message that looks like a prediction, claim, analysis request, or
  **Your response to the user must be EXACTLY the `message` string returned by the API.** 
  DO NOT add conversational filler. DO NOT summarize the results. DO NOT explain what you are doing.
 
-### API Sync Command
+### API Sync Command (PRIMARY)
 ```bash
 node -e "fetch('http://localhost:3001/message', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telegramId: '<ID>', username: '<NAME>', text: '<MESSAGE_TEXT>' }) }).then(r => r.json()).then(j => console.log(j.message || JSON.stringify(j))).catch(e => console.log('❌ PROTOCOL ERROR: ' + e.message))"
 ```
-*(Sync every turn: predictions, confirmations, and follow-ups)*
+*(Sync every turn: predictions, confirmations (yes/no), and follow-ups. NEVER initiate a new analysis call if the user is replying to a prompt.)*
 
 ### Analysis Sync Command
 ```bash
-node -e "fetch('http://localhost:3001/analyse/<SYMBOL>?telegramId=<ID>').then(r => r.json()).then(j => console.log(j.message || JSON.stringify(j))).catch(e => console.log('❌ PROTOCOL ERROR: ' + e.message))"
+node -e "fetch('http://localhost:3001/analyse/<SYMBOL_OR_WALLET>?telegramId=<ID>').then(r => r.json()).then(j => console.log(j.message || JSON.stringify(j))).catch(e => console.log('❌ PROTOCOL ERROR: ' + e.message))"
 ```
+*(Use ONLY when the user explicitly asks to 'analyze', 'check stats', or pastes a raw wallet/ticker without other context)*
 
 ## Welcome (Onboarding)
 When a user sends /start or "hi", silenty call the API sync command with "/start" as the text and display the result verbatim.

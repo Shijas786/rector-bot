@@ -167,8 +167,14 @@ export async function handleMessage(
     }
 
     // 2. Natural Language Fallback
-    // If user just types something, try to see if it's a prediction
+    // If user just types a wallet, analyze it. If it's a claim, predict it.
     try {
+        const fuzzyAddress = trimmed.replace(/[\.\s]/g, "");
+        if (/^0x[a-fA-F0-9]{40}$/i.test(fuzzyAddress)) {
+            await SessionManager.set(telegramId, {});
+            return handleAnalyse(telegramId, fuzzyAddress);
+        }
+
         const resolutionDate = extractResolutionDate(trimmed);
         const disambiguation = await disambiguatePrediction(trimmed, resolutionDate);
 
@@ -182,7 +188,7 @@ export async function handleMessage(
             return `${disambiguationText}\n\n${runbookPreview}`;
         }
     } catch (e) {
-        // Not a prediction, show welcome
+        // Not a prediction or wallet, show welcome
     }
 
     return handleHelp(user.shadowAddress);
@@ -190,12 +196,15 @@ export async function handleMessage(
 
 export async function handleAnalyse(telegramId: string, symbol: string): Promise<string> {
     try {
-        // Detect Wallet Address
-        if (/^0x[a-fA-F0-9]{40}$/.test(symbol)) {
-            const analysis = await analyseWallet(symbol);
+        // Clean the symbol (remove trailing dots, spaces, etc.)
+        const cleanSymbol = symbol.trim().replace(/[\.\,\?]$/, "");
+
+        // Detect Wallet Address (Case-Insensitive)
+        if (/^0x[a-fA-F0-9]{40}$/i.test(cleanSymbol)) {
+            const analysis = await analyseWallet(cleanSymbol);
             return `🔍 **RECTOR: WALLET ANALYST** 🛡️
 ━━━━━━━━━━━━━━━━━━━━━━━━
-📍 **Address:** \`${symbol}\`
+📍 **Address:** \`${cleanSymbol}\`
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${analysis}
@@ -205,7 +214,7 @@ ${analysis}
 (e.g., "This wallet hits $5k by tomorrow")`;
         }
 
-        const result = await analyseToken(symbol);
+        const result = await analyseToken(cleanSymbol);
         await SessionManager.set(telegramId, {
             lastAnalysisResistance: result.resistance,
             lastAnalysisSymbol: result.symbol,
