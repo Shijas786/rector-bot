@@ -10,6 +10,12 @@ mkdir -p "$WORKSPACE_DIR"
 cp /app/rector/SOUL.md "$WORKSPACE_DIR/SOUL.md"
 mkdir -p "$WORKSPACE_DIR/skills"
 cp -r /app/rector/skills/rector-predictor "$WORKSPACE_DIR/skills/"
+# Dynamic Port Injection for inter-container connectivity
+echo "Injecting dynamic port $PORT into bot skills..."
+find "$WORKSPACE_DIR/skills" -type f -name "*.md" -exec sed -i "s/localhost:3001/localhost:$PORT/g" {} +
+find "$WORKSPACE_DIR/skills" -type f -name "*.md" -exec sed -i "s/127.0.0.1:3001/127.0.0.1:$PORT/g" {} +
+# Also handle the public URL if it's there
+find "$WORKSPACE_DIR/skills" -type f -name "*.md" -exec sed -i "s|https://openclaw-predictor-agent-production.up.railway.app|http://127.0.0.1:$PORT|g" {} +
 
 # Clear ALL agent state to avoid stale sessions/hallucinations
 echo "=== Clearing ALL AI Agent State ==="

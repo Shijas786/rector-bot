@@ -235,11 +235,24 @@ app.post("/message", async (req, res) => {
 
 const startServer = async () => {
     try {
-        // Start server FIRST so Railway healthcheck passes immediately
         const serverPort = parseInt(String(PORT), 10);
-        app.listen(serverPort, "0.0.0.0", () => {
+        
+        // Main listener (Public traffic)
+        const mainServer = app.listen(serverPort, "0.0.0.0", () => {
             console.log(`🚀 Rector Agent API running on 0.0.0.0:${serverPort}`);
         });
+
+        // Internal listener (Bot/Local traffic) - on fixed port 3001
+        // Only start if it's not the same as the main port to avoid conflict
+        if (serverPort !== 3001) {
+            try {
+                app.listen(3001, "127.0.0.1", () => {
+                    console.log(`🔗 Internal API tunnel active on 127.0.0.1:3001`);
+                });
+            } catch (err: any) {
+                console.warn(`[API] Could not start internal listener on 3001: ${err.message}`);
+            }
+        }
 
         console.log("[API] Connecting to MCP in background...");
         mcpClient.connect().then(() => {
