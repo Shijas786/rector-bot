@@ -27,22 +27,21 @@ function RunbookPreview({ text }: { text: string }) {
   const decisionMatch = cleanText.match(/## Decision\n([\s\S]*?)(?=\n##|$)/);
   const decisionText = decisionMatch ? decisionMatch[1].trim() : "N/A";
 
+  const shortId = runbookId.split('-')[1]?.substring(0, 8) || runbookId.substring(0, 10);
+
   return (
     <div className="runbook-preview-card">
       <div className="runbook-preview-header">
-        <span className="runbook-preview-label">RUNBOOK PREVIEW</span>
+        <span className="runbook-preview-label">RUNBOOK #{shortId}</span>
         <div className="runbook-tag">READY</div>
       </div>
       
       <ul className="runbook-metadata">
-        <li><span className="label">RunbookID:</span> {runbookId}</li>
-        <li><span className="label">CreatedAt:</span> {createdAt}</li>
-        <li><span className="label">ResolveAt:</span> {resolveAt}</li>
-        <li><span className="label">OutcomeType:</span> BINARY</li>
-        <li><span className="label">Allowed:</span> YES, NO, INCONCLUSIVE</li>
+        <li><span className="label">Created:</span> {new Date(createdAt).toLocaleDateString()}</li>
+        <li><span className="label">Resolve:</span> {new Date(resolveAt).toLocaleDateString()}</li>
       </ul>
 
-      <div className="runbook-section-title">## Decision</div>
+      <div className="runbook-section-title">Decision</div>
       <div className="runbook-decision-box">
         <p>{decisionText}</p>
       </div>
