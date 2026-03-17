@@ -265,22 +265,16 @@ export default function HomePage() {
         <div className="carousel-wrapper">
           <div className="ticker-track">
             {predictions.map((p) => (
-              <Link key={p.id} href={`/predictions/${p.id}`} className="claim-card">
-                <div className="claim-card-text">{p.disambiguated}</div>
-                <div className="claim-card-meta">
-                  <span className="claim-card-source">ID #{p.id}</span>
-                  <span className={`claim-card-status ${p.status.toLowerCase()}`}>{p.status}</span>
-                </div>
+              <Link key={p.id} href={`/predictions/${p.id}`} className="ticker-text-item">
+                <span>{p.disambiguated}</span>
+                <span className={`ticker-status ${p.status.toLowerCase()}`}>{p.status}</span>
               </Link>
             ))}
             {/* Duplicate for infinite effect */}
             {predictions.map((p) => (
-              <Link key={`dup-${p.id}`} href={`/predictions/${p.id}`} className="claim-card">
-                <div className="claim-card-text">{p.disambiguated}</div>
-                <div className="claim-card-meta">
-                  <span className="claim-card-source">ID #{p.id}</span>
-                  <span className={`claim-card-status ${p.status.toLowerCase()}`}>{p.status}</span>
-                </div>
+              <Link key={`dup-${p.id}`} href={`/predictions/${p.id}`} className="ticker-text-item">
+                <span>{p.disambiguated}</span>
+                <span className={`ticker-status ${p.status.toLowerCase()}`}>{p.status}</span>
               </Link>
             ))}
           </div>
