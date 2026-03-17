@@ -230,15 +230,20 @@ app.post("/message", async (req, res) => {
 
 const startServer = async () => {
     try {
-        console.log("[API] Connecting to MCP...");
-        await mcpClient.connect();
-        console.log("[API] MCP client connected");
-        
+        // Start server FIRST so Railway healthcheck passes immediately
         app.listen(Number(PORT), "0.0.0.0", () => {
             console.log(`🚀 Rector Agent API running on 0.0.0.0:${PORT}`);
         });
+
+        console.log("[API] Connecting to MCP in background...");
+        mcpClient.connect().then(() => {
+            console.log("[API] MCP client connected and ready");
+        }).catch(err => {
+            console.error("[API] Background MCP connection failed:", err.message);
+        });
+
     } catch (err: any) {
-        console.error("[API] Failed to start:", err.message);
+        console.error("[API] Fatal startup error:", err.message);
         process.exit(1);
     }
 };

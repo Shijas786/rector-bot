@@ -31,8 +31,10 @@ export class MCPClient {
     async connect(): Promise<void> {
         if (this.process) return; // Prevent multiple connections
         
-        console.log("[MCP] Spawning client process...");
-        this.process = spawn("npx", ["--no-install", "bnbchain-mcp"], {
+        const binaryPath = "./node_modules/.bin/bnbchain-mcp";
+        console.log(`[MCP] Spawning client process: node ${binaryPath}`);
+        
+        this.process = spawn("node", [binaryPath], {
             stdio: ["pipe", "pipe", "pipe"],
             env: {
                 ...process.env,
