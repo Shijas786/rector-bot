@@ -35,6 +35,10 @@ echo "Conflicting skills removed"
 echo "=== Running OpenClaw Doctor ==="
 npx openclaw doctor --fix 2>&1 || true
 
+# DATABASE SYNC: Ensure UserSession and other schema changes are live
+echo "=== Syncing Database Schema (Prisma) ==="
+cd /app/agent && npx prisma db push --accept-data-loss && npx prisma generate
+
 # Step 4: Write FINAL openclaw.json (Overwriting whatever doctor did)
 echo "=== Writing Final openclaw.json ==="
 mkdir -p /root/.openclaw
@@ -51,7 +55,11 @@ cat > "/root/.openclaw/openclaw.json" << EOF
     "profile": "full",
     "allow": ["group:runtime", "group:web", "group:fs"],
     "web": {
-      "fetch": { "enabled": true, "allowInternal": true, "allowLocal": true },
+      "fetch": { 
+        "enabled": true, 
+        "allowInternal": true,
+        "allowLocal": true
+      },
       "search": { "enabled": true }
     },
     "exec": {
@@ -64,14 +72,11 @@ cat > "/root/.openclaw/openclaw.json" << EOF
     }
   },
   "channels": {
-    "telegram": {
-      "botToken": "${TELEGRAM_BOT_TOKEN}",
-      "dmPolicy": "open",
-      "allowFrom": ["*"],
-      "commands": {
-        "native": false,
-        "nativeSkills": false
-      }
+    "botToken": "${TELEGRAM_BOT_TOKEN}",
+    "dmPolicy": "open",
+    "allowFrom": ["*"],
+    "commands": {
+      "nativeSkills": false
     }
   },
   "gateway": {

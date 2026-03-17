@@ -33,13 +33,13 @@ For EVERY user message that looks like a prediction, claim, analysis request, or
 
 ### API Sync Command
 ```bash
-node -e "fetch('http://localhost:3001/message', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telegramId: '<ID>', username: '<NAME>', text: '<MESSAGE_TEXT>' }) }).then(r => r.json()).then(j => console.log(j.message || JSON.stringify(j)))"
+node -e "fetch('http://localhost:3001/message', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telegramId: '<ID>', username: '<NAME>', text: '<MESSAGE_TEXT>' }) }).then(r => r.json()).then(j => console.log(j.message || JSON.stringify(j))).catch(e => console.log('❌ PROTOCOL ERROR: ' + e.message))"
 ```
 *(Sync every turn: predictions, confirmations, and follow-ups)*
 
 ### Analysis Sync Command
 ```bash
-node -e "fetch('http://localhost:3001/analyse/<SYMBOL>?telegramId=<ID>').then(r => r.json()).then(j => console.log(j.message || JSON.stringify(j)))"
+node -e "fetch('http://localhost:3001/analyse/<SYMBOL>?telegramId=<ID>').then(r => r.json()).then(j => console.log(j.message || JSON.stringify(j))).catch(e => console.log('❌ PROTOCOL ERROR: ' + e.message))"
 ```
 
 ## Welcome (Onboarding)
