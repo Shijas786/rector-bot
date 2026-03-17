@@ -88,5 +88,6 @@ export function formatDisambiguation(result: DisambiguationResult): string {
 
 ${result.ambiguities.length > 0 ? `⚠️ **AMBIGUITIES:**\n${result.ambiguities.map(a => `• ${a}`).join("\n")}` : ""}
 
-${result.recommendation === "APPROVE" ? "Shall I proceed to build the Runbook? (**yes/no**)" : "I recommend NOT proceeding. Do you want to force it anyway? (**yes/no**)"}`;
+${result.recommendation === "APPROVE" ? "" : "🚨 **WARNING: REJECTED RECOMMENDED**\n"}━━━━━━━━━━━━━━━━━━━━━━━━
+*(Check the Roadmap below and type **yes** to submit on-chain)*`;
 }

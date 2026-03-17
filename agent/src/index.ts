@@ -139,11 +139,16 @@ export async function handleMessage(
     // If user just types something, try to see if it's a prediction
     try {
         const resolutionDate = extractResolutionDate(trimmed);
-        const result = await disambiguatePrediction(trimmed, resolutionDate);
+        const disambiguation = await disambiguatePrediction(trimmed, resolutionDate);
 
-        if (result.disambiguated) {
-            userState.set(telegramId, { lastDisambiguation: result, awaitingConfirmation: "predict" });
-            return formatDisambiguation(result);
+        if (disambiguation.disambiguated) {
+            const runbook = await buildRunbook(disambiguation, Date.now());
+            userState.set(telegramId, { lastDisambiguation: disambiguation, lastRunbook: runbook, awaitingConfirmation: "execute" });
+            
+            const disambiguationText = formatDisambiguation(disambiguation);
+            const runbookPreview = formatRunbookPreview(runbook);
+            
+            return `${disambiguationText}\n\n${runbookPreview}`;
         }
     } catch (e) {
         // Not a prediction, show welcome
@@ -169,9 +174,15 @@ export async function handleAnalyse(telegramId: string, symbol: string): Promise
 export async function handlePredict(telegramId: string, claim: string): Promise<string> {
     try {
         const resolutionDate = extractResolutionDate(claim);
-        const result = await disambiguatePrediction(claim, resolutionDate);
-        userState.set(telegramId, { lastDisambiguation: result, awaitingConfirmation: "predict" });
-        return formatDisambiguation(result);
+        const disambiguation = await disambiguatePrediction(claim, resolutionDate);
+        const runbook = await buildRunbook(disambiguation, Date.now());
+        
+        userState.set(telegramId, { lastDisambiguation: disambiguation, lastRunbook: runbook, awaitingConfirmation: "execute" });
+        
+        const disambiguationText = formatDisambiguation(disambiguation);
+        const runbookPreview = formatRunbookPreview(runbook);
+        
+        return `${disambiguationText}\n\n${runbookPreview}`;
     } catch (error: any) {
         return `❌ Could not process prediction.`;
     }
