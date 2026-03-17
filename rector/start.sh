@@ -74,8 +74,8 @@ cat > "/root/.openclaw/openclaw.json" << EOF
       "dmPolicy": "open",
       "allowFrom": ["*"],
       "commands": {
-        "native": "off",
-        "nativeSkills": "off"
+        "native": false,
+        "nativeSkills": false
       }
     }
   },
