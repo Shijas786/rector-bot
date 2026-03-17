@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 import {
+    handlePredict,
     handleMessage,
     handleAnalyse,
     extractResolutionDate,
@@ -94,12 +95,8 @@ app.post("/predict", async (req, res) => {
             user = await prisma.user.update({ where: { telegramId: String(telegramId) }, data: { username } }) as any;
         }
 
-        // Disambiguate
-        const resolutionDate = extractResolutionDate(claimText);
-        const disambiguation = await disambiguatePrediction(claimText, resolutionDate);
-
-        // Execute on-chain pipeline
-        const resultMessage = await executePredictionPipeline(user!.id, String(telegramId), disambiguation);
+        // Disambiguate and return rich confirmation prompt
+        const resultMessage = await handlePredict(String(telegramId), claimText);
 
         res.json({ message: resultMessage });
     } catch (error: any) {
@@ -136,12 +133,7 @@ app.get("/predict-get", async (req, res) => {
         }
 
         console.log(`[API] Processing prediction for user ${telegramId}: ${claimText}`);
-        const resolutionDate = extractResolutionDate(claimText);
-        console.log(`[API] Extracted resolution date: ${resolutionDate.toISOString()}`);
-        const disambiguation = await disambiguatePrediction(claimText, resolutionDate);
-        console.log(`[API] Disambiguation complete: ${disambiguation.disambiguated}`);
-        const resultMessage = await executePredictionPipeline(user!.id, String(telegramId), disambiguation);
-        console.log(`[API] Pipeline execution complete`);
+        const resultMessage = await handlePredict(String(telegramId), claimText);
 
         res.json({ message: resultMessage });
     } catch (error: any) {

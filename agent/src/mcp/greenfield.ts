@@ -24,16 +24,34 @@ export async function uploadRunbook(
     writeFileSync(tempPath, runbookContent);
 
     try {
+        console.log(`[Greenfield] Attempting upload: ${objectName}`);
         const result = await mcpClient.callTool("gnfd_create_file", {
             bucketName: RUNBOOKS_BUCKET,
             filePath: tempPath,
             privateKey: process.env.PRIVATE_KEY,
             network: "testnet",
-        }) as { objectName?: string; txHash?: string };
+        }) as any;
+
+        if (!result) throw new Error("MCP tool 'gnfd_create_file' returned no result");
+
+        // Handle JSON error strings from MCP
+        if (typeof result === "string") {
+            try {
+                const parsed = JSON.parse(result);
+                if (parsed.status === "error") throw new Error(parsed.message);
+            } catch (e: any) {
+                if (e.message.includes("error")) throw e;
+            }
+        }
+
+        if (result.status === "error") throw new Error(result.message || "Unknown Greenfield upload error");
 
         const ref = `gnfd://${RUNBOOKS_BUCKET}/${objectName}`;
-        console.log(`[Greenfield] Runbook uploaded: ${ref}`);
+        console.log(`[Greenfield] Upload success: ${ref}`);
         return ref;
+    } catch (error: any) {
+        console.error(`[Greenfield ERROR] Failed to upload runbook:`, error.message);
+        throw new Error(`Greenfield Upload Failed: ${error.message}`);
     } finally {
         try { unlinkSync(tempPath); } catch (e) { }
     }

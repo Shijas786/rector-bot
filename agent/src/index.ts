@@ -23,9 +23,10 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "https://rector.up.railway.app"
 // In-memory conversation state (per user)
 const userState = new Map<string, {
     lastDisambiguation?: DisambiguationResult;
+    lastRunbook?: string;
     lastAnalysisResistance?: number;
     lastAnalysisSymbol?: string;
-    awaitingConfirmation?: string;
+    awaitingConfirmation?: "predict" | "execute" | "alert";
 }>();
 
 /**
@@ -65,7 +66,10 @@ export async function handleMessage(
         const answer = text.trim().toLowerCase();
         if (answer === "yes" || answer === "y") {
             const result = await handleConfirmation(user.id, telegramId, state);
-            userState.set(telegramId, {});
+            // Don't clear state if we just moved to 'execute' state
+            if (!result.includes("SHALL I PROCEED WITH ON-CHAIN SUBMISSION?")) {
+                userState.set(telegramId, {});
+            }
             return result;
         } else {
             userState.set(telegramId, {});

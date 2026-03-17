@@ -20,6 +20,10 @@ RUN npm install --include=dev
 RUN npx prisma generate
 RUN npm run build
 
+# Fix for hardcoded path in @bnb-chain/mcp dependency
+RUN mkdir -p /home/runner/work/bnbchain-mcp/bnbchain-mcp/node_modules/@bnb-chain/reed-solomon/dist && \
+    ln -s /app/agent/node_modules/@bnb-chain/reed-solomon/dist/sub-worker.js /home/runner/work/bnbchain-mcp/bnbchain-mcp/node_modules/@bnb-chain/reed-solomon/dist/sub-worker.js
+
 # Start script
 WORKDIR /app/rector
 CMD ["./start.sh"]
