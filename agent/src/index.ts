@@ -20,14 +20,37 @@ import * as chrono from "chrono-node";
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://rector.up.railway.app";
 
-// In-memory conversation state (per user)
-const userState = new Map<string, {
-    lastDisambiguation?: DisambiguationResult;
-    lastRunbook?: string;
-    lastAnalysisResistance?: number;
-    lastAnalysisSymbol?: string;
-    awaitingConfirmation?: "predict" | "execute" | "alert";
-}>();
+// Database-backed Session Manager
+const SessionManager = {
+    async get(telegramId: string) {
+        const session = await (prisma as any).userSession.findUnique({ where: { telegramId } });
+        return {
+            lastDisambiguation: session?.lastDisambiguation as any,
+            lastRunbook: session?.lastRunbook || undefined,
+            awaitingConfirmation: (session?.awaitingConfirmation as "predict" | "execute" | "alert") || undefined,
+        };
+    },
+    async set(telegramId: string, data: any) {
+        if (!data || Object.keys(data).length === 0) {
+            await (prisma as any).userSession.deleteMany({ where: { telegramId } });
+        } else {
+            await (prisma as any).userSession.upsert({
+                where: { telegramId },
+                update: {
+                    lastDisambiguation: data.lastDisambiguation || null,
+                    lastRunbook: data.lastRunbook || null,
+                    awaitingConfirmation: data.awaitingConfirmation || null,
+                },
+                create: {
+                    telegramId,
+                    lastDisambiguation: data.lastDisambiguation || null,
+                    lastRunbook: data.lastRunbook || null,
+                    awaitingConfirmation: data.awaitingConfirmation || null,
+                }
+            });
+        }
+    }
+};
 
 /**
  * Process an incoming message from Rector/Telegram.
@@ -59,22 +82,21 @@ export async function handleMessage(
         });
     }
 
-    const state = userState.get(telegramId) || {};
-
+    const state = await SessionManager.get(telegramId);
     const trimmed = text.trim();
 
     // 1. Explicit Commands (Take precedence over confirmation state)
     if (trimmed.startsWith("/analyse") || trimmed.startsWith("/analyze")) {
         const symbol = trimmed.split(/\s+/)[1];
         if (!symbol) return "Usage: /analyse [token]";
-        userState.set(telegramId, {}); // Clear any pending confirmation state
+        await SessionManager.set(telegramId, {}); // Clear any pending confirmation state
         return handleAnalyse(telegramId, symbol);
     }
 
     if (trimmed.startsWith("/predict")) {
         const claim = trimmed.replace("/predict", "").trim();
         if (!claim) return "Usage: /predict [your prediction]";
-        userState.set(telegramId, {}); // Clear any pending confirmation state
+        await SessionManager.set(telegramId, {}); // Clear any pending confirmation state
         return handlePredict(telegramId, claim);
     }
 
@@ -118,7 +140,7 @@ export async function handleMessage(
     }
 
     if (trimmed === "/help" || trimmed === "/start" || trimmed === "/history") {
-        userState.set(telegramId, {}); // Clear any pending confirmation state
+        await SessionManager.set(telegramId, {}); // Clear any pending confirmation state
         if (trimmed === "/history") return handleHistory(user.id);
         return handleHelp(user.shadowAddress);
     }
@@ -134,11 +156,11 @@ export async function handleMessage(
             // Single turn flow: handleConfirmation returns the final receipt or a preview
             // If it's the preview for 'execute' (roadmap + claim), last message asks "SHALL I PROCEED...?"
             if (!result.includes("SHALL I PROCEED WITH ON-CHAIN SUBMISSION?")) {
-                userState.set(telegramId, {});
+                await SessionManager.set(telegramId, {});
             }
             return result;
         } else if (isNo) {
-            userState.set(telegramId, {});
+            await SessionManager.set(telegramId, {});
             return "Okay, cancelled. Type /help to see what I can do.";
         }
         // If it's not yes/no, fall through to natural language parsing (treat as new prediction)
@@ -152,7 +174,7 @@ export async function handleMessage(
 
         if (disambiguation.disambiguated) {
             const runbook = await buildRunbook(disambiguation, Date.now());
-            userState.set(telegramId, { lastDisambiguation: disambiguation, lastRunbook: runbook, awaitingConfirmation: "execute" });
+            await SessionManager.set(telegramId, { lastDisambiguation: disambiguation, lastRunbook: runbook, awaitingConfirmation: "execute" });
             
             const disambiguationText = formatDisambiguation(disambiguation);
             const runbookPreview = formatRunbookPreview(runbook);
@@ -169,7 +191,7 @@ export async function handleMessage(
 export async function handleAnalyse(telegramId: string, symbol: string): Promise<string> {
     try {
         const result = await analyseToken(symbol);
-        userState.set(telegramId, {
+        await SessionManager.set(telegramId, {
             lastAnalysisResistance: result.resistance,
             lastAnalysisSymbol: result.symbol,
             awaitingConfirmation: "alert",
@@ -186,7 +208,7 @@ export async function handlePredict(telegramId: string, claim: string): Promise<
         const disambiguation = await disambiguatePrediction(claim, resolutionDate);
         const runbook = await buildRunbook(disambiguation, Date.now());
         
-        userState.set(telegramId, { lastDisambiguation: disambiguation, lastRunbook: runbook, awaitingConfirmation: "execute" });
+        await SessionManager.set(telegramId, { lastDisambiguation: disambiguation, lastRunbook: runbook, awaitingConfirmation: "execute" });
         
         const disambiguationText = formatDisambiguation(disambiguation);
         const runbookPreview = formatRunbookPreview(runbook);
@@ -224,7 +246,7 @@ async function handleConfirmation(userId: string, telegramId: string, state: any
     if (state.awaitingConfirmation === "predict" && state.lastDisambiguation) {
         // Build runbook and SHOW PREVIEW first
         const runbook = await buildRunbook(state.lastDisambiguation, Date.now());
-        userState.set(telegramId, { ...state, lastRunbook: runbook, awaitingConfirmation: "execute" });
+        await SessionManager.set(telegramId, { ...state, lastRunbook: runbook, awaitingConfirmation: "execute" });
         return formatRunbookPreview(runbook);
     }
     

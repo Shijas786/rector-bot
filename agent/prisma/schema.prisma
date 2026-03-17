@@ -21,6 +21,16 @@ model User {
   @@map("users")
 }
 
+model UserSession {
+  telegramId           String   @id
+  lastDisambiguation   Json?
+  lastRunbook          String?
+  awaitingConfirmation String?  // "predict", "execute", "alert"
+  updatedAt            DateTime @default(now()) @updatedAt
+
+  @@map("user_sessions")
+}
+
 model Prediction {
   id              Int      @id @default(autoincrement())
   onchainId       Int?     @unique
