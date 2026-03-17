@@ -77,16 +77,16 @@ export function formatDisambiguation(result: DisambiguationResult): string {
     const verIcon = result.verifiability === "HIGH" ? "✅" :
         result.verifiability === "MEDIUM" ? "⚡" : "⚠️";
 
-    return `Got it! Here's what I understood:
+    return `🛡 **RECTOR PROTOCOL: DISAMBIGUATION** 🛰
+    
+**PREDICTION:**
+\`${result.disambiguated}\`
 
-PREDICTION:
-${result.disambiguated}
+**VERIFIABILITY:** ${result.verifiability} ${verIcon}
+**SOURCE:** \`${result.primarySource.replace("_", " ").toUpperCase()}\`
+**RECOM.:** ${result.recommendation === "APPROVE" ? "✅ APPROVED" : "❌ REJECTED"}
 
-Verifiability: ${result.verifiability} ${verIcon}
-Primary source: ${result.primarySource.replace("_", " ")}
-Feasibility: ${result.feasibility}
-Recommendation: ${result.recommendation === "APPROVE" ? "✅ APPROVED" : "❌ REJECTED - Too ambiguous or unverifiable"}
-${result.ambiguities.length > 0 ? `\n⚠️ Possible ambiguities:\n${result.ambiguities.map(a => `• ${a}`).join("\n")}` : ""}
+${result.ambiguities.length > 0 ? `⚠️ **AMBIGUITIES:**\n${result.ambiguities.map(a => `• ${a}`).join("\n")}` : ""}
 
-${result.recommendation === "APPROVE" ? "Shall I proceed to build the Runbook? (yes/no)" : "I recommend NOT proceeding. Do you want to force it anyway? (yes/no)"}`;
+${result.recommendation === "APPROVE" ? "Shall I proceed to build the Runbook? (**yes/no**)" : "I recommend NOT proceeding. Do you want to force it anyway? (**yes/no**)"}`;
 }

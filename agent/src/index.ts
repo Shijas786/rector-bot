@@ -173,9 +173,39 @@ export async function handlePredict(telegramId: string, claim: string): Promise<
     }
 }
 
+/**
+ * Format runbook into a rich Telegram preview.
+ */
+function formatRunbookPreview(runbook: string): string {
+    const lines = runbook.split("\n");
+    const steps = lines.filter(l => l.startsWith("### Step")).map(l => l.replace("### ", "🔹 **").concat("**"));
+    const metadata = lines.slice(0, 10).filter(l => l.startsWith("- ")).join("\n");
+    
+    return `📜 **RECTOR: RUNBOOK GENERATED** 🚀
+
+${metadata}
+
+**VERIFICATION ROADMAP:**
+${steps.join("\n")}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+*Building this roadmap on BNB Greenfield...*
+*Attesting core logic to BSC...*
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+**SHALL I PROCEED WITH ON-CHAIN SUBMISSION?** (**yes/no**)`;
+}
+
 async function handleConfirmation(userId: string, telegramId: string, state: any): Promise<string> {
     if (state.awaitingConfirmation === "predict" && state.lastDisambiguation) {
-        return executePredictionPipeline(userId, telegramId, state.lastDisambiguation);
+        // Build runbook and SHOW PREVIEW first
+        const runbook = await buildRunbook(state.lastDisambiguation, Date.now());
+        userState.set(telegramId, { ...state, lastRunbook: runbook, awaitingConfirmation: "execute" });
+        return formatRunbookPreview(runbook);
+    }
+    
+    if (state.awaitingConfirmation === "execute" && state.lastRunbook) {
+        return executePredictionPipeline(userId, telegramId, state.lastDisambiguation, state.lastRunbook);
     }
     return "Nothing to confirm.";
 }
@@ -183,14 +213,15 @@ async function handleConfirmation(userId: string, telegramId: string, state: any
 export async function executePredictionPipeline(
     userId: string,
     telegramId: string,
-    disambiguation: DisambiguationResult
+    disambiguation: DisambiguationResult,
+    providedRunbook?: string
 ): Promise<string> {
     try {
         const user = await prisma.user.findUnique({ where: { id: userId } });
         const walletAddress = (user as any)?.shadowAddress || "0x0000000000000000000000000000000000000000";
 
         const tempId = Date.now();
-        const runbook = await buildRunbook(disambiguation, tempId);
+        const runbook = providedRunbook || await buildRunbook(disambiguation, tempId);
         const runbookRef = await uploadRunbook(tempId, runbook);
         const resolutionTimestamp = Math.floor(new Date(disambiguation.resolutionDate).getTime() / 1000);
 
@@ -225,12 +256,17 @@ export async function executePredictionPipeline(
             runbookRef
         );
 
-        return `🛡 **Protocol Initiated**
-        
-✓ Runbook stored on BNB Greenfield
-✓ Prediction #${predictionId} live on BSC
-✓ Details: ${FRONTEND_URL}/predictions/${predictionId}
-✓ TX: https://testnet.bscscan.com/tx/${txHash}`;
+        return `🛡 **RECTOR ORACLE: PROTOCOL INITIATED** 🚀
+
+✅ **RUNBOOK:** [View on BNB Greenfield](${runbookRef})
+✅ **PREDICTION # ${predictionId}:** [LIVE ON BSC](https://testnet.bscscan.com/tx/${txHash})
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+🌐 **OFFICIAL DASHBOARD:**
+[rector.up.railway.app/predictions/${predictionId}](https://rector.up.railway.app/predictions/${predictionId})
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+*(Protocol execution synchronized. Monitor resolution in the dashboard)*`;
     } catch (error: any) {
         console.error(`[Pipeline Error] Failed for user ${userId} / claim: ${disambiguation.disambiguated}`, error);
         return `❌ Error: ${error.message}`;
