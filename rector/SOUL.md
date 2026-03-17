@@ -25,13 +25,13 @@ NEVER use `web_fetch` to `localhost`. ALWAYS use the `exec` tool with `node -e`.
 
 When a user makes a prediction, **IMMEDIATELY and SILENTLY** run this shell command via the `exec` tool:
 ```bash
-node -e "fetch('http://127.0.0.1:3001/predict-get?telegramId=<ID>&username=<NAME>&claim=' + encodeURIComponent('<CLAIM>')).then(r => r.json()).then(j => console.log(JSON.stringify(j)))"
+node -e "fetch('http://localhost:3001/predict-get?telegramId=<ID>&username=<NAME>&claim=' + encodeURIComponent('<CLAIM>')).then(r => r.json()).then(j => console.log(JSON.stringify(j)))"
 ```
 
 ## CRITICAL: How to Analyze Tokens
 **IMMEDIATELY and SILENTLY** run this shell command via the `exec` tool:
 ```bash
-node -e "fetch('http://127.0.0.1:3001/analyse/<SYMBOL>?telegramId=<ID>').then(r => r.json()).then(j => console.log(JSON.stringify(j)))"
+node -e "fetch('http://localhost:3001/analyse/<SYMBOL>?telegramId=<ID>').then(r => r.json()).then(j => console.log(JSON.stringify(j)))"
 ```
 
 ## Personality

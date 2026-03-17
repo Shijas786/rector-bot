@@ -228,17 +228,19 @@ app.post("/message", async (req, res) => {
 const startServer = async () => {
     try {
         const serverPort = parseInt(String(PORT), 10);
+        const { createServer } = await import("http");
         
-        // Main listener (Public traffic)
-        const mainServer = app.listen(serverPort, "0.0.0.0", () => {
+        // Main Public Server (0.0.0.0)
+        const mainServer = createServer(app);
+        mainServer.listen(serverPort, "0.0.0.0", () => {
             console.log(`🚀 Rector Agent API running on 0.0.0.0:${serverPort}`);
         });
 
-        // Internal listener (Bot/Local traffic) - on fixed port 3001
-        // Only start if it's not the same as the main port to avoid conflict
+        // Internal Bot Server (127.0.0.1:3001)
         if (serverPort !== 3001) {
             try {
-                app.listen(3001, "127.0.0.1", () => {
+                const internalServer = createServer(app);
+                internalServer.listen(3001, "127.0.0.1", () => {
                     console.log(`🔗 Internal API tunnel active on 127.0.0.1:3001`);
                 });
             } catch (err: any) {
