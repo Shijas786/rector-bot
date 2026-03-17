@@ -38,6 +38,11 @@ app.get("/health", (_req, res) => {
     res.json({ status: "ok", service: "rector-agent" });
 });
 
+// Root check
+app.get("/", (_req, res) => {
+    res.send("Rector Agent API is Live! 🛡️🛰️🎯");
+});
+
 // 1. Live Crypto Price (Proxied from Binance)
 app.get("/price/:symbol", async (req, res) => {
     try {
@@ -231,8 +236,9 @@ app.post("/message", async (req, res) => {
 const startServer = async () => {
     try {
         // Start server FIRST so Railway healthcheck passes immediately
-        app.listen(Number(PORT), "0.0.0.0", () => {
-            console.log(`🚀 Rector Agent API running on 0.0.0.0:${PORT}`);
+        const serverPort = parseInt(String(PORT), 10);
+        app.listen(serverPort, "0.0.0.0", () => {
+            console.log(`🚀 Rector Agent API running on 0.0.0.0:${serverPort}`);
         });
 
         console.log("[API] Connecting to MCP in background...");

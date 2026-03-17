@@ -7,7 +7,7 @@
                 "rootDirectory": "frontend"
             },
             "deploy": {
-                "startCommand": "npm run start",
+                "startCommand": "PORT=3000 HOST=0.0.0.0 npm run start",
                 "healthcheckPath": "/",
                 "restartPolicyType": "ON_FAILURE"
             }
