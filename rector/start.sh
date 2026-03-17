@@ -101,6 +101,11 @@ echo "Waiting 15s for gateway..."
 sleep 15
 
 # Start auto-resolution cron
+echo "[inf]  === Rector Diagnostics ==="
+if [ -n "$PRIVATE_KEY" ]; then
+  echo "[inf]  Protocol Storage Key detected."
+  echo "[inf]  Ensure your account (0x1813e0e8E19bAeCf5F9B21676b21CbBAf7836f8c) has BNB and is initialized on Greenfield Testnet."
+fi
 echo "=== Starting auto-resolution cron ==="
 cd /app/agent && node dist/scripts/cron.js &
 

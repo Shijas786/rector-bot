@@ -51,7 +51,10 @@ export async function uploadRunbook(
         return ref;
     } catch (error: any) {
         console.error(`[Greenfield ERROR] Failed to upload runbook:`, error.message);
-        throw new Error(`Greenfield Upload Failed: ${error.message}`);
+        if (error.message.includes("account") && error.message.includes("not found")) {
+            throw new Error(`STORAGE ACCOUNT NOT INITIALIZED\n━━━━━━━━━━━━━━━━━━━━\nYour storage account (PRIVATE_KEY) is not found on Greenfield Testnet.\n\n📍 **ACTION REQUIRED:**\nPlease send some BNB to your protocol wallet on BNB Smart Chain and then visit the Greenfield Testnet Bridge to initialize it.\n\nAccount: 0x1813e0e8E19bAeCf5F9B21676b21CbBAf7836f8c (Found in rpc error)`);
+        }
+        throw new Error(`[RECTOR STORAGE ERROR]: ${error.message}`);
     } finally {
         try { unlinkSync(tempPath); } catch (e) { }
     }
