@@ -27,14 +27,7 @@ echo "=== Skills Cleanup ==="
 rm -rf "$WORKSPACE_DIR/skills/bnbchain-mcp-skill"
 echo "Conflicting skills removed"
 
-# Failsafe: Ensure agent dependencies and build are present
-if [ ! -d "/app/agent/dist" ]; then
-    echo "Failsafe: Building agent..."
-    cd /app/agent && npm install && npx prisma generate && npm run build
-    cd /
-fi
-
-# Step 3: Run doctor FIRST to setup system, but we will overwrite its config
+# Step 3: Run doctor to setup system
 echo "=== Running OpenClaw Doctor ==="
 npx openclaw doctor --fix 2>&1 || true
 
