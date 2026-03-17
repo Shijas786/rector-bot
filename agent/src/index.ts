@@ -125,8 +125,11 @@ export async function handleMessage(
 
     // 2. Handle confirmation responses
     if (state.awaitingConfirmation) {
-        const answer = text.trim().toLowerCase();
-        if (answer === "yes" || answer === "y") {
+        const answer = text.trim().toLowerCase().replace(/[^a-z]/g, "");
+        const isYes = ["yes", "y", "confirm", "proceed", "ok", "okay"].includes(answer);
+        const isNo = ["no", "n", "cancel", "stop", "abort"].includes(answer);
+
+        if (isYes) {
             const result = await handleConfirmation(user.id, telegramId, state);
             // Single turn flow: handleConfirmation returns the final receipt or a preview
             // If it's the preview for 'execute' (roadmap + claim), last message asks "SHALL I PROCEED...?"
@@ -134,7 +137,7 @@ export async function handleMessage(
                 userState.set(telegramId, {});
             }
             return result;
-        } else if (answer === "no" || answer === "n" || answer === "cancel") {
+        } else if (isNo) {
             userState.set(telegramId, {});
             return "Okay, cancelled. Type /help to see what I can do.";
         }
@@ -295,7 +298,17 @@ export async function executePredictionPipeline(
 *(Protocol execution synchronized. Monitor resolution in the dashboard)*`;
     } catch (error: any) {
         console.error(`[Pipeline Error] Failed for user ${userId} / claim: ${disambiguation.disambiguated}`, error);
-        return `❌ Error: ${error.message}`;
+        return `❌ **RECTOR: PROTOCOL FAILURE** 🚨
+━━━━━━━━━━━━━━━━━━━━━━━━
+🛡 **Protocol:** Rector Oracle
+🎯 **Status:** EXECUTION REJECTED
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+**DETAILS:**
+${error.message}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+*(Check logs and resolve missing collateral or account initialization)*`;
     }
 }
 

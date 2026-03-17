@@ -51,8 +51,17 @@ export async function uploadRunbook(
         return ref;
     } catch (error: any) {
         console.error(`[Greenfield ERROR] Failed to upload runbook:`, error.message);
+        
+        // Calculate the actual storage address from PRIVATE_KEY for accurate diagnostics
+        let storageAddr = "0xUnknown";
+        try {
+            const { ethers } = await import("ethers");
+            const wallet = new ethers.Wallet(process.env.PRIVATE_KEY || "");
+            storageAddr = wallet.address;
+        } catch (e) {}
+
         if (error.message.includes("account") && error.message.includes("not found")) {
-            throw new Error(`STORAGE ACCOUNT NOT INITIALIZED\n━━━━━━━━━━━━━━━━━━━━\nYour storage account (PRIVATE_KEY) is not found on Greenfield Testnet.\n\n📍 **ACTION REQUIRED:**\nPlease send some BNB to your protocol wallet on BNB Smart Chain and then visit the Greenfield Testnet Bridge to initialize it.\n\nAccount: 0x1813e0e8E19bAeCf5F9B21676b21CbBAf7836f8c (Found in rpc error)`);
+            throw new Error(`STORAGE ACCOUNT NOT INITIALIZED\n━━━━━━━━━━━━━━━━━━━━\nYour storage account is not found on Greenfield Testnet.\n\n📍 **ACTION REQUIRED:**\nPlease fund your wallet on BSC Testnet and visit the Greenfield Bridge.\n\nAccount: \`${storageAddr}\``);
         }
         throw new Error(`[RECTOR STORAGE ERROR]: ${error.message}`);
     } finally {
