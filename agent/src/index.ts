@@ -61,34 +61,20 @@ export async function handleMessage(
 
     const state = userState.get(telegramId) || {};
 
-    // Handle confirmation responses
-    if (state.awaitingConfirmation) {
-        const answer = text.trim().toLowerCase();
-        if (answer === "yes" || answer === "y") {
-            const result = await handleConfirmation(user.id, telegramId, state);
-            // Don't clear state if we just moved to 'execute' state
-            if (!result.includes("SHALL I PROCEED WITH ON-CHAIN SUBMISSION?")) {
-                userState.set(telegramId, {});
-            }
-            return result;
-        } else {
-            userState.set(telegramId, {});
-            return "Okay, cancelled. Type /help to see what I can do.";
-        }
-    }
-
     const trimmed = text.trim();
 
-    // 1. Explicit Commands
+    // 1. Explicit Commands (Take precedence over confirmation state)
     if (trimmed.startsWith("/analyse") || trimmed.startsWith("/analyze")) {
         const symbol = trimmed.split(/\s+/)[1];
         if (!symbol) return "Usage: /analyse [token]";
+        userState.set(telegramId, {}); // Clear any pending confirmation state
         return handleAnalyse(telegramId, symbol);
     }
 
     if (trimmed.startsWith("/predict")) {
         const claim = trimmed.replace("/predict", "").trim();
         if (!claim) return "Usage: /predict [your prediction]";
+        userState.set(telegramId, {}); // Clear any pending confirmation state
         return handlePredict(telegramId, claim);
     }
 
@@ -131,8 +117,28 @@ export async function handleMessage(
         }
     }
 
-    if (trimmed === "/help" || trimmed === "/start") {
+    if (trimmed === "/help" || trimmed === "/start" || trimmed === "/history") {
+        userState.set(telegramId, {}); // Clear any pending confirmation state
+        if (trimmed === "/history") return handleHistory(user.id);
         return handleHelp(user.shadowAddress);
+    }
+
+    // 2. Handle confirmation responses
+    if (state.awaitingConfirmation) {
+        const answer = text.trim().toLowerCase();
+        if (answer === "yes" || answer === "y") {
+            const result = await handleConfirmation(user.id, telegramId, state);
+            // Single turn flow: handleConfirmation returns the final receipt or a preview
+            // If it's the preview for 'execute' (roadmap + claim), last message asks "SHALL I PROCEED...?"
+            if (!result.includes("SHALL I PROCEED WITH ON-CHAIN SUBMISSION?")) {
+                userState.set(telegramId, {});
+            }
+            return result;
+        } else if (answer === "no" || answer === "n" || answer === "cancel") {
+            userState.set(telegramId, {});
+            return "Okay, cancelled. Type /help to see what I can do.";
+        }
+        // If it's not yes/no, fall through to natural language parsing (treat as new prediction)
     }
 
     // 2. Natural Language Fallback
