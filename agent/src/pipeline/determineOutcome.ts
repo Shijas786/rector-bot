@@ -7,6 +7,7 @@ import { StepResult } from "./executeRunbook.js";
  */
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://rector.up.railway.app";
 
 export interface OutcomeResult {
     outcome: boolean | "INCONCLUSIVE";
@@ -85,7 +86,8 @@ ${outcome.inconclusiveReason || "Sources conflicted"}
 Reasoning: ${outcome.reasoning}
 
 Onchain proof:
-🔗 https://testnet.bscscan.com/tx/${txHash}`;
+🔗 [Onchain Proof](https://testnet.bscscan.com/tx/${txHash})
+🔗 [Full Details](${FRONTEND_URL}/predictions/${predictionId})`;
     }
 
     const statusEmoji = outcome.outcome ? "✅" : "❌";
@@ -103,7 +105,8 @@ Onchain proof:
       Reasoning: ${outcome.reasoning}
 
       Onchain proof:
-      🔗 https://testnet.bscscan.com/tx/${txHash}
+      🔗 [Onchain Proof](https://testnet.bscscan.com/tx/${txHash})
+      🔗 [Full Details](${FRONTEND_URL}/predictions/${predictionId})
 
       Your record: ${correct}/${total} correct 🎯`;
 }

@@ -18,6 +18,8 @@ import * as chrono from "chrono-node";
  * Rector: The AI-Agentic Oracle
  */
 
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://rector.up.railway.app";
+
 // In-memory conversation state (per user)
 const userState = new Map<string, {
     lastDisambiguation?: DisambiguationResult;
@@ -227,6 +229,7 @@ export async function executePredictionPipeline(
         
 ✓ Runbook stored on BNB Greenfield
 ✓ Prediction #${predictionId} live on BSC
+✓ Details: ${FRONTEND_URL}/predictions/${predictionId}
 ✓ TX: https://testnet.bscscan.com/tx/${txHash}`;
     } catch (error: any) {
         console.error(`[Pipeline Error] Failed for user ${userId} / claim: ${disambiguation.disambiguated}`, error);
@@ -238,7 +241,7 @@ async function handleCheck(id: number): Promise<string> {
     const p = await prisma.prediction.findFirst({ where: { onchainId: id } });
     if (!p) return `❌ Prediction #${id} not found.`;
     const status = p.status === "RESOLVED" ? (p.outcome ? "✅ TRUE" : "❌ FALSE") : `⏳ ${p.status}`;
-    return `📜 **PREDICTION #${id}**\n\nClaim: ${p.claimText}\nStatus: ${status}\nResolves: ${p.resolutionDate.toISOString().split("T")[0]}\n🔗 [Proof](https://testnet.bscscan.com/tx/${p.txHashSubmit})`;
+    return `📜 **PREDICTION #${id}**\n\nClaim: ${p.claimText}\nStatus: ${status}\nResolves: ${p.resolutionDate.toISOString().split("T")[0]}\n🔗 [View Details](${FRONTEND_URL}/predictions/${id})\n🔗 [On-chain Proof](https://testnet.bscscan.com/tx/${p.txHashSubmit})`;
 }
 
 function handleHelp(shadowAddress?: string): string {
@@ -249,6 +252,7 @@ function handleHelp(shadowAddress?: string): string {
     return `🛡 **Rector: The AI-Agentic Oracle** 🚀
 ${walletInfo}
 I transform claims into verifiable on-chain truths.
+🌐 **Protocol Interface:** ${FRONTEND_URL}
 
 **How It Works:**
 1️⃣ **Make a Claim**: You provide a prediction, I disambiguate it.
