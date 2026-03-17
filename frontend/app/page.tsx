@@ -15,13 +15,16 @@ interface Prediction {
 }
 
 function RunbookPreview({ text }: { text: string }) {
+  // Clean up markdown code blocks if present
+  const cleanText = text.replace(/```markdown\n|```/g, "").trim();
+  
   // Simple extraction logic for the design requirements
-  const runbookId = text.match(/RunbookID: ([^\s\s]+)/)?.[1] || "N/A";
-  const createdAt = text.match(/CreatedAt: ([^\s\n]+)/)?.[1] || "N/A";
-  const resolveAt = text.match(/ResolveAt: ([^\s\n]+)/)?.[1] || "N/A";
+  const runbookId = cleanText.match(/RunbookID: ([^\s\n]+)/)?.[1] || "N/A";
+  const createdAt = cleanText.match(/CreatedAt: ([^\s\n]+)/)?.[1] || "N/A";
+  const resolveAt = cleanText.match(/ResolveAt: ([^\s\n]+)/)?.[1] || "N/A";
   
   // Extract Decision - everything between ## Decision and next ##
-  const decisionMatch = text.match(/## Decision\n([\s\S]*?)(?=\n##|$)/);
+  const decisionMatch = cleanText.match(/## Decision\n([\s\S]*?)(?=\n##|$)/);
   const decisionText = decisionMatch ? decisionMatch[1].trim() : "N/A";
 
   return (
@@ -208,7 +211,7 @@ export default function HomePage() {
 
           {messages.map((msg, i) => (
             <div key={i} className={`chat-bubble ${msg.role}`}>
-              {msg.role === 'rector' && msg.text.startsWith('# Prediction Runbook') ? (
+              {msg.role === 'rector' && (msg.text.includes('# Prediction Runbook') || msg.text.includes('RunbookID:')) ? (
                 <RunbookPreview text={msg.text} />
               ) : (
                 msg.text
