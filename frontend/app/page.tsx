@@ -14,6 +14,39 @@ interface Prediction {
   };
 }
 
+function RunbookPreview({ text }: { text: string }) {
+  // Simple extraction logic for the design requirements
+  const runbookId = text.match(/RunbookID: ([^\s\s]+)/)?.[1] || "N/A";
+  const createdAt = text.match(/CreatedAt: ([^\s\n]+)/)?.[1] || "N/A";
+  const resolveAt = text.match(/ResolveAt: ([^\s\n]+)/)?.[1] || "N/A";
+  
+  // Extract Decision - everything between ## Decision and next ##
+  const decisionMatch = text.match(/## Decision\n([\s\S]*?)(?=\n##|$)/);
+  const decisionText = decisionMatch ? decisionMatch[1].trim() : "N/A";
+
+  return (
+    <div className="runbook-preview-card">
+      <div className="runbook-preview-header">
+        <span className="runbook-preview-label">RUNBOOK PREVIEW</span>
+        <div className="runbook-tag">READY</div>
+      </div>
+      
+      <ul className="runbook-metadata">
+        <li><span className="label">RunbookID:</span> {runbookId}</li>
+        <li><span className="label">CreatedAt:</span> {createdAt}</li>
+        <li><span className="label">ResolveAt:</span> {resolveAt}</li>
+        <li><span className="label">OutcomeType:</span> BINARY</li>
+        <li><span className="label">Allowed:</span> YES, NO, INCONCLUSIVE</li>
+      </ul>
+
+      <div className="runbook-section-title">## Decision</div>
+      <div className="runbook-decision-box">
+        <p>{decisionText}</p>
+      </div>
+    </div>
+  );
+}
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://openclaw-predictor-agent-production.up.railway.app";
 
 export default function HomePage() {
@@ -176,20 +209,7 @@ export default function HomePage() {
           {messages.map((msg, i) => (
             <div key={i} className={`chat-bubble ${msg.role}`}>
               {msg.role === 'rector' && msg.text.startsWith('# Prediction Runbook') ? (
-                <div className="runbook-preview-card">
-                  <div className="runbook-preview-header">
-                    <span className="mono" style={{ fontSize: '0.7rem' }}>VERIFICATION PLAN</span>
-                    <div className="runbook-tag">READY</div>
-                  </div>
-                  <pre style={{ whiteSpace: 'pre-wrap', marginBottom: '1.5rem' }}>{msg.text}</pre>
-                  <button 
-                    className="btn btn-primary w-full"
-                    onClick={() => handleFinalRecord(msg.runbookClaim || "")}
-                    disabled={isRecording}
-                  >
-                    {isRecording ? "Recording on-chain..." : "Join to Create Claim"}
-                  </button>
-                </div>
+                <RunbookPreview text={msg.text} />
               ) : (
                 msg.text
               )}

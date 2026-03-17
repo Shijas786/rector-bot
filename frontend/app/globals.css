@@ -226,6 +226,7 @@ a:hover {
   margin-bottom: 2rem;
   line-height: 1;
   background: linear-gradient(to bottom, #fff 0%, #a1a1aa 100%);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -407,6 +408,7 @@ a:hover {
   letter-spacing: -0.02em;
   color: var(--text-primary);
   display: -webkit-box;
+  line-clamp: 3;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
@@ -832,34 +834,103 @@ tr:last-child td {
 }
 
 .runbook-preview-card {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--yellow);
-  border-radius: var(--radius-md);
+  background: #111112;
+  border: 1px solid #1a1a1c;
+  border-radius: 16px;
   padding: 1.5rem;
   margin-top: 1rem;
   font-family: var(--font-mono);
-  font-size: 0.85rem;
   overflow: hidden;
   position: relative;
   text-align: left;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 
 .runbook-preview-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.runbook-preview-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  font-weight: 600;
 }
 
 .runbook-tag {
-  font-size: 0.65rem;
-  background: rgba(240, 185, 11, 0.1);
+  font-size: 0.7rem;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  letter-spacing: 0.05em;
+}
+
+.runbook-metadata {
+  list-style: none;
+  margin-bottom: 2rem;
+}
+
+.runbook-metadata li {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.runbook-metadata .label {
+  color: var(--text-secondary);
+  min-width: 100px;
+}
+
+.runbook-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.runbook-decision-box {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.runbook-decision-box p {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.runbook-steps-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.runbook-step {
+  padding-left: 1rem;
+  border-left: 1px solid var(--border);
+}
+
+.runbook-step-header {
+  font-weight: 600;
+  font-size: 0.85rem;
   color: var(--yellow);
-  padding: 0.2rem 0.5rem;
-  border: 1px solid var(--yellow);
-  border-radius: 4px;
+  margin-bottom: 0.25rem;
+}
+
+.runbook-step-body {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
 }
 
 .typing-indicator {
