@@ -114,7 +114,8 @@ export default function HomePage() {
       
       // If the response contains a runbook request, we also trigger the /disambiguate for the nice UI
       if (data.message.toLowerCase().includes("shall i proceed") || data.message.toLowerCase().includes("understood")) {
-        const dRes = await fetch(`${API_BASE}/disambiguate`, {
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://openclaw-predictor-agent-production.up.railway.app";
+        const dRes = await fetch(`${apiBase}/disambiguate`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ claimText: userText })
@@ -158,8 +159,8 @@ export default function HomePage() {
       if (data.message && data.message.includes("Prediction #")) {
         setMessages(prev => [...prev, { role: 'rector', text: "✅ Claim Recorded Successfully! Re-syncing protocol feed..." }]);
         setStatusMessage("Success! Prediction is now live.");
-        // Refresh feed
-        const freshRes = await fetch("http://localhost:3001/predictions");
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://openclaw-predictor-agent-production.up.railway.app";
+        const freshRes = await fetch(`${apiBase}/predictions`);
         const freshData = await freshRes.json();
         setPredictions(freshData);
       } else {
