@@ -2,7 +2,7 @@ import "dotenv/config";
 
 import { prisma } from "./db/prisma.js";
 import { mcpClient } from "./mcp/client.js";
-import { analyseToken } from "./pipeline/analyse.js";
+import { analyseToken, analyseWallet } from "./pipeline/analyse.js";
 import { disambiguatePrediction, formatDisambiguation, DisambiguationResult } from "./pipeline/disambiguate.js";
 export { disambiguatePrediction, formatDisambiguation };
 export type { DisambiguationResult };
@@ -190,6 +190,21 @@ export async function handleMessage(
 
 export async function handleAnalyse(telegramId: string, symbol: string): Promise<string> {
     try {
+        // Detect Wallet Address
+        if (/^0x[a-fA-F0-9]{40}$/.test(symbol)) {
+            const analysis = await analyseWallet(symbol);
+            return `🔍 **RECTOR: WALLET ANALYST** 🛡️
+━━━━━━━━━━━━━━━━━━━━━━━━
+📍 **Address:** \`${symbol}\`
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+${analysis}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+**DO YOU WANT TO PREDICT SOMETHING ABOUT THIS WALLET?**
+(e.g., "This wallet hits $5k by tomorrow")`;
+        }
+
         const result = await analyseToken(symbol);
         await SessionManager.set(telegramId, {
             lastAnalysisResistance: result.resistance,
@@ -198,7 +213,12 @@ export async function handleAnalyse(telegramId: string, symbol: string): Promise
         });
         return result.formattedMessage;
     } catch (error: any) {
-        return `❌ Could not analyse ${symbol.toUpperCase()}.`;
+        console.error(`[Analyse Error] ${symbol}:`, error.message);
+        return `❌ **RECTOR: ANALYSIS ERROR**
+━━━━━━━━━━━━━━━━━━━━━━━━
+I couldn't find market data for \`${symbol.toUpperCase()}\`. 
+
+**Note:** Ensure you are using a standard ticker (e.g., BTC, BNB) or a valid EVM wallet address.`;
     }
 }
 

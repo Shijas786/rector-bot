@@ -8,6 +8,8 @@ import OpenAI from "openai";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const BINANCE_API = process.env.BINANCE_API_URL || "https://api.binance.com";
 
+import { getZerionWalletPortfolio, getZerionWalletPositions } from "./dataSources.js";
+
 interface MarketData {
     symbol: string;
     price: number;
@@ -177,4 +179,54 @@ Want me to set an alert at $${analysis.resistance.toLocaleString()}? ✅`;
         aiTake: analysis.aiTake,
         formattedMessage,
     };
+}
+/**
+ * Wallet Analysis Pipeline
+ */
+export async function analyseWallet(address: string): Promise<string> {
+    try {
+        const [portfolio, positions] = await Promise.all([
+            getZerionWalletPortfolio(address),
+            getZerionWalletPositions(address)
+        ]);
+
+        const totalValue = portfolio?.data?.attributes?.total?.value || 0;
+        const topPositions = (positions?.data || [])
+            .slice(0, 5)
+            .map((p: any) => ({
+                name: p.attributes?.name,
+                value: p.attributes?.value,
+                price: p.attributes?.price,
+                change: p.attributes?.changes?.absolute_1d
+            }));
+
+        const prompt = `You are an elite "smart friend" portfolio analyst.
+        Analyze this wallet: ${address}
+        Total Value: $${totalValue.toLocaleString()}
+        Top Positions: ${JSON.stringify(topPositions)}
+
+        Provide a brief (3-4 sentence) "AI Take" on this wallet's strategy and current standing. 
+        Tone: Insightful, casual, and pro-level.
+        
+        Format:
+        "Total Portfolio Value: $X
+        
+        AI Take:
+        [Your Analysis]
+        
+        Top Assets:
+        - Asset 1 ($Value)
+        - Asset 2 ($Value)"`;
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.7,
+        });
+
+        return response.choices[0].message.content || "Could not analyze wallet.";
+    } catch (error: any) {
+        console.error("[Zerion Error]", error.message);
+        throw new Error(`Zerion Analysis Failed: ${error.message}`);
+    }
 }
