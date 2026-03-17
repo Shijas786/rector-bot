@@ -18,12 +18,19 @@ function RunbookPreview({ text }: { text: string }) {
   // Clean up markdown code blocks if present
   const cleanText = text.replace(/```markdown\n|```/g, "").trim();
   
-  // Structured extraction
-  const runbookId = cleanText.match(/RunbookID: ([^\s\n]+)/)?.[1] || "N/A";
-  const createdAt = cleanText.match(/CreatedAt: ([^\s\n]+)/)?.[1] || "N/A";
-  const resolveAt = cleanText.match(/ResolveAt: ([^\s\n]+)/)?.[1] || "N/A";
-  const predictionId = cleanText.match(/PredictionID: ([^\s\n]+)/)?.[1] || "N/A";
+  // Robust extraction logic
+  const runbookId = cleanText.match(/RunbookID: ([^\s\n\-]+)/)?.[1] || "N/A";
+  const createdAtRaw = cleanText.match(/CreatedAt: ([^\s\n]+)/)?.[1];
+  const resolveAtRaw = cleanText.match(/ResolveAt: ([^\s\n]+)/)?.[1];
+  const outcomeType = cleanText.match(/OutcomeType: ([^\s\n]+)/)?.[1] || "BINARY";
+  const allowed = cleanText.match(/AllowedOutcomes: ([^\s\n,]+(?:, [^\s\n,]+)*)/)?.[1] || "YES, NO, INCONCLUSIVE";
   
+  const formatDate = (dateStr: string | undefined) => {
+    if (!dateStr) return "N/A";
+    const date = new Date(dateStr);
+    return isNaN(date.getTime()) ? "N/A" : date.toLocaleString();
+  };
+
   // Extract Decision
   const decisionMatch = cleanText.match(/## Decision\n([\s\S]*?)(?=\n##|$)/);
   const decisionText = decisionMatch ? decisionMatch[1].trim() : "N/A";
@@ -31,30 +38,19 @@ function RunbookPreview({ text }: { text: string }) {
   return (
     <div className="runbook-preview-card">
       <div className="runbook-preview-header">
-        <span className="runbook-preview-label">VERIFICATION REPORT</span>
+        <span className="runbook-preview-label">RUNBOOK PREVIEW</span>
         <div className="runbook-tag">READY</div>
       </div>
       
-      <div className="runbook-metadata-grid">
-        <div className="runbook-meta-item">
-          <span className="label">Runbook ID</span>
-          <span className="value">{runbookId}</span>
-        </div>
-        <div className="runbook-meta-item">
-          <span className="label">Prediction ID</span>
-          <span className="value">{predictionId}</span>
-        </div>
-        <div className="runbook-meta-item">
-          <span className="label">Created At</span>
-          <span className="value">{new Date(createdAt).toLocaleString()}</span>
-        </div>
-        <div className="runbook-meta-item">
-          <span className="label">Resolution</span>
-          <span className="value">{new Date(resolveAt).toLocaleString()}</span>
-        </div>
-      </div>
+      <ul className="runbook-metadata">
+        <li>RunbookID: {runbookId}</li>
+        <li>CreatedAt: {formatDate(createdAtRaw)}</li>
+        <li>ResolveAt: {formatDate(resolveAtRaw)}</li>
+        <li>OutcomeType: {outcomeType}</li>
+        <li>AllowedOutcomes: {allowed}</li>
+      </ul>
 
-      <div className="runbook-section-title">Decision Analysis</div>
+      <div className="runbook-section-title">## Decision</div>
       <div className="runbook-decision-box">
         <p>{decisionText}</p>
       </div>
