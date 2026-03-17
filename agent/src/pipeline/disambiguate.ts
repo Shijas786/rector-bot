@@ -43,7 +43,8 @@ Rate verifiability: HIGH / MEDIUM / LOW.
 Suggest the best verification source:
 - If it's about crypto prices on exchanges: prefer "binance_api" or "coingecko"
 - If it's about real-world events, politics, or pop-culture: prefer "polymarket_api"
-- If it's about on-chain DeFi data: prefer "chainlink_bsc"
+- If it's about on-chain DeFi data or smart contract state: prefer "chainlink_bsc"
+- If it's about wallet balances, portfolio value, or token holdings in a specific address: prefer "zerion_api"
 
 Return ONLY JSON:
 {

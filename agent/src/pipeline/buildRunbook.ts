@@ -101,6 +101,7 @@ Every verification step MUST follow this exact sub-step pattern:
 ═══ RULES ═══
 - Use minimum 2 independent sources
 - For crypto: Binance API → Chainlink BSC → CoinGecko
+- For wallets/portfolios: Zerion API → BscScan (for native) → CryptoCompare
 - For news/events: news_search → web_search → wiki_lookup
 - For mixed claims: combine both types
 - ALWAYS include a news_search or web_search step for non-price claims
