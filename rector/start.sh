@@ -55,11 +55,7 @@ cat > "/root/.openclaw/openclaw.json" << EOF
     "profile": "full",
     "allow": ["group:runtime", "group:web", "group:fs"],
     "web": {
-      "fetch": { 
-        "enabled": true, 
-        "allowInternal": true,
-        "allowLocal": true
-      },
+      "fetch": { "enabled": true },
       "search": { "enabled": true }
     },
     "exec": {
@@ -72,11 +68,14 @@ cat > "/root/.openclaw/openclaw.json" << EOF
     }
   },
   "channels": {
-    "botToken": "${TELEGRAM_BOT_TOKEN}",
-    "dmPolicy": "open",
-    "allowFrom": ["*"],
-    "commands": {
-      "nativeSkills": false
+    "telegram": {
+      "botToken": "${TELEGRAM_BOT_TOKEN}",
+      "dmPolicy": "open",
+      "allowFrom": ["*"],
+      "commands": {
+        "native": false,
+        "nativeSkills": false
+      }
     }
   },
   "gateway": {
