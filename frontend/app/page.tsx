@@ -101,7 +101,7 @@ export default function HomePage() {
       ifText: "Bitcoin hits $100,000",
       ifIcon: "/icons/bitcoin.png",
       thenText: "send 1.5 BNB to @alpha_vault",
-      thenIcon: "/icons/alpha.png"
+      thenIcon: "/icons/bnb.png"
     },
     {
       ifText: "Apple releases Foldable iPhone",
@@ -113,7 +113,7 @@ export default function HomePage() {
       ifText: "ETH reaches $5,000",
       ifIcon: "/icons/eth.png",
       thenText: "unlock 'Whale' status badge",
-      thenIcon: "/icons/success.webp"
+      thenIcon: "/icons/whale.png"
     }
   ];
 
