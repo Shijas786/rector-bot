@@ -12,10 +12,21 @@ async function main() {
 
     const address = await registry.getAddress();
     console.log("\n✅ PredictionRegistry deployed to:", address);
+
+    // Deploy ConditionalPayment (Escrow) linked to Registry
+    console.log("\nDeploying ConditionalPayment (Escrow)...");
+    const ConditionalPayment = await ethers.getContractFactory("ConditionalPayment");
+    const escrow = await ConditionalPayment.deploy(address);
+    await escrow.waitForDeployment();
+
+    const escrowAddress = await escrow.getAddress();
+    console.log("✅ ConditionalPayment deployed to:", escrowAddress);
+
     console.log("\nNext steps:");
     console.log(`1. Add to .env: PREDICTION_REGISTRY_ADDRESS=${address}`);
-    console.log(`2. Verify: npx hardhat verify --network bscTestnet ${address} ${deployer.address} ${deployer.address}`);
-    console.log(`3. View: https://testnet.bscscan.com/address/${address}`);
+    console.log(`2. Add to .env: CONDITIONAL_PAYMENT_ADDRESS=${escrowAddress}`);
+    console.log(`3. Verify Registry: npx hardhat verify --network bscTestnet ${address} ${deployer.address} ${deployer.address}`);
+    console.log(`4. Verify Escrow: npx hardhat verify --network bscTestnet ${escrowAddress} ${address}`);
 }
 
 main().catch((error) => {

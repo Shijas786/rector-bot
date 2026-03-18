@@ -6,21 +6,29 @@ import { ethers } from "ethers";
 
 const RPC_URL = process.env.NEXT_PUBLIC_BSC_RPC || "https://data-seed-prebsc-1-s1.binance.org:8545/";
 const PRIVATE_KEY = process.env.PRIVATE_KEY || "";
-const PREDICTION_REGISTRY = process.env.PREDICTION_REGISTRY_ADDRESS || "0x83C0314A8361cF1A12c319e241eADF45b986A0FF";
+const PREDICTION_REGISTRY = process.env.PREDICTION_REGISTRY_ADDRESS || "0x02E9D22b7D5d6310815ee1c8eCB43e8a7baa57f0";
+const CONDITIONAL_PAYMENT = process.env.CONDITIONAL_PAYMENT_ADDRESS || "0xF1071252d1a89F7C31925C83CC8D0bD7b1da229F";
 
 const ABI = [
     "function submitWithRunbook(string claimText, string disambiguated, string runbookRef, uint256 resolutionDate, address submitter) external returns (uint256)",
     "function resolveAndAttest(uint256 predictionId, bool outcome, uint8 confidence, string evidenceRef, string reasoning, bytes signature) external",
-    "function getPrediction(uint256 predictionId) external view returns (uint256, address, string, string, string, uint256, uint8, bool, uint8, string, string, bytes, uint256, uint256)",
+    "function getPrediction(uint256 predictionId) external view returns (uint256 id, address submitter, string claimText, string disambiguated, string runbookRef, uint256 resolutionDate, uint8 status, bool outcome, uint8 confidence, string evidenceRef, string reasoning, bytes signature, uint256 createdAt, uint256 resolvedAt)",
     "function getAccuracy(address user) external view returns (uint256 correct, uint256 total)",
     "function getByAddress(address user) external view returns (uint256[])",
     "function markInconclusive(uint256 predictionId) external",
     "event PredictionSubmitted(uint256 indexed id, address indexed submitter, uint256 resolutionDate)"
 ];
 
+const ESCROW_ABI = [
+    "function escrowCount() external view returns (uint256)",
+    "function escrows(uint256 id) external view returns (address creator, address beneficiary, uint256 predictionId, uint256 amount, bool claimed)",
+    "function getEscrowWithPrediction(uint256 escrowId) external view returns (tuple(address creator, address beneficiary, uint256 predictionId, uint256 amount, bool claimed) escrow, tuple(uint256 id, address submitter, string claimText, string disambiguated, string runbookRef, uint256 resolutionDate, uint8 status, bool outcome, uint8 confidence, string evidenceRef, string reasoning, bytes signature, uint256 createdAt, uint256 resolvedAt) prediction)"
+];
+
 const provider = new ethers.JsonRpcProvider(RPC_URL);
 const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
-const contract = new ethers.Contract(PREDICTION_REGISTRY, ABI, wallet);
+const registryContract = new ethers.Contract(PREDICTION_REGISTRY, ABI, wallet);
+const escrowContract = new ethers.Contract(CONDITIONAL_PAYMENT, ESCROW_ABI, wallet);
 
 /**
  * Submit a prediction onchain via direct ethers.
@@ -33,7 +41,7 @@ export async function submitPrediction(
     submitter: string
 ): Promise<{ txHash: string; predictionId: number }> {
     console.log(`[BSC] Submitting prediction: ${claimText}`);
-    const tx = await contract.submitWithRunbook(
+    const tx = await registryContract.submitWithRunbook(
         claimText,
         disambiguated,
         runbookRef,
@@ -45,14 +53,14 @@ export async function submitPrediction(
     // Find the PredictionSubmitted event
     const event = receipt.logs.find((log: any) => {
         try {
-            const parsed = contract.interface.parseLog(log);
+            const parsed = registryContract.interface.parseLog(log);
             return parsed?.name === "PredictionSubmitted";
         } catch (e) {
             return false;
         }
     });
 
-    const parsedEvent = event ? contract.interface.parseLog(event) : null;
+    const parsedEvent = event ? registryContract.interface.parseLog(event) : null;
     let predictionId = parsedEvent ? Number(parsedEvent.args.id) : 0;
 
     // Safety fallback: if predictionId is 0, it might be a parsing edge case
@@ -82,7 +90,7 @@ export async function resolvePrediction(
     signature: string
 ): Promise<{ txHash: string }> {
     console.log(`[BSC] Resolving prediction #${id}: ${outcome}`);
-    const tx = await contract.resolveAndAttest(id, outcome, confidence, evidenceRef, reasoning, signature);
+    const tx = await registryContract.resolveAndAttest(id, outcome, confidence, evidenceRef, reasoning, signature);
     const receipt = await tx.wait();
     return { txHash: receipt.hash };
 }
@@ -91,7 +99,7 @@ export async function resolvePrediction(
  * Mark a prediction as inconclusive via direct ethers.
  */
 export async function markInconclusive(id: number): Promise<{ txHash: string }> {
-    const tx = await contract.markInconclusive(id);
+    const tx = await registryContract.markInconclusive(id);
     const receipt = await tx.wait();
     return { txHash: receipt.hash };
 }
@@ -100,14 +108,14 @@ export async function markInconclusive(id: number): Promise<{ txHash: string }> 
  * Read a prediction from the contract.
  */
 export async function getPrediction(id: number): Promise<unknown> {
-    return contract.getPrediction(id);
+    return registryContract.getPrediction(id);
 }
 
 /**
  * Read accuracy stats for an address.
  */
 export async function getAccuracy(address: string): Promise<{ correct: number; total: number }> {
-    const [correct, total] = await contract.getAccuracy(address);
+    const [correct, total] = await registryContract.getAccuracy(address);
     return {
         correct: Number(correct),
         total: Number(total),
@@ -118,8 +126,30 @@ export async function getAccuracy(address: string): Promise<{ correct: number; t
  * Get all prediction IDs for an address.
  */
 export async function getByAddress(address: string): Promise<number[]> {
-    const ids = await contract.getByAddress(address);
+    const ids = await registryContract.getByAddress(address);
     return ids.map((id: any) => Number(id));
+}
+
+/**
+ * Read escrows for a prediction.
+ */
+export async function getEscrowsForPrediction(predictionId: number): Promise<any[]> {
+    const count = await escrowContract.escrowCount();
+    const escrows = [];
+    for (let i = 1; i <= Number(count); i++) {
+        const e = await escrowContract.escrows(i);
+        if (Number(e.predictionId) === predictionId) {
+            escrows.push({
+                id: i,
+                creator: e.creator,
+                beneficiary: e.beneficiary,
+                predictionId: Number(e.predictionId),
+                amount: ethers.formatEther(e.amount),
+                claimed: e.claimed
+            });
+        }
+    }
+    return escrows;
 }
 
 /**

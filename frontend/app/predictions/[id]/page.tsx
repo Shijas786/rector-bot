@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import TriggerSection from "@/components/TriggerSection";
 
 interface Prediction {
   id: number;
@@ -89,6 +90,13 @@ export default function PredictionPage({ params }: { params: { id: string } }) {
           )}
         </div>
       </div>
+
+      {/* ── Trigger Section (Agentic Escrow) ── */}
+      <TriggerSection 
+        predictionId={prediction.id} 
+        predictionStatus={prediction.status}
+        predictionOutcome={prediction.evidenceJson.toLowerCase().includes('"outcome":true') || prediction.status === "TRUE"}
+      />
 
       {/* ── Proof of Resolution ── */}
       {prediction.status !== "PENDING" && (

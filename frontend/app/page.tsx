@@ -14,7 +14,7 @@ interface Prediction {
   };
 }
 
-function RunbookPreview({ text }: { text: string }) {
+function RunbookPreview({ text, claimText, onFinalize, isRecording }: { text: string; claimText?: string; onFinalize?: (text: string) => void; isRecording?: boolean }) {
   // Clean up markdown code blocks if present
   const cleanText = text.replace(/```markdown\n|```/g, "").trim();
   
@@ -54,6 +54,26 @@ function RunbookPreview({ text }: { text: string }) {
       <div className="runbook-decision-box">
         <p>{decisionText}</p>
       </div>
+
+      {onFinalize && claimText && (
+        <button 
+          className="btn" 
+          onClick={() => onFinalize(claimText)}
+          disabled={isRecording}
+          style={{ 
+            width: "100%", 
+            background: "#fff", 
+            color: "#000", 
+            marginTop: "2rem", 
+            fontWeight: "700", 
+            padding: "1rem",
+            fontSize: "1rem",
+            borderRadius: "999px"
+          }}
+        >
+          {isRecording ? "FINALIZING..." : "Finalize Claim"}
+        </button>
+      )}
     </div>
   );
 }
@@ -221,7 +241,12 @@ export default function HomePage() {
           {messages.map((msg, i) => (
             <div key={i} className={`chat-bubble ${msg.role}`}>
               {msg.role === 'rector' && (msg.text.includes('# Prediction Runbook') || msg.text.includes('RunbookID:')) ? (
-                <RunbookPreview text={msg.text} />
+                <RunbookPreview 
+                  text={msg.text} 
+                  claimText={msg.runbookClaim} 
+                  onFinalize={handleFinalRecord} 
+                  isRecording={isRecording}
+                />
               ) : (
                 msg.text
               )}
