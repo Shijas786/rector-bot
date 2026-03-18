@@ -177,7 +177,7 @@ export default function HomePage() {
       });
       const data = await res.json();
       
-      if (data.message && data.message.includes("Prediction #")) {
+      if (data.message && (data.message.includes("CONFIRMED") || data.message.includes("#"))) {
         setMessages(prev => [...prev, { role: 'rector', text: "✅ Claim Recorded Successfully! Re-syncing protocol feed..." }]);
         setStatusMessage("Success! Prediction is now live.");
         const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://openclaw-predictor-agent-production.up.railway.app";
