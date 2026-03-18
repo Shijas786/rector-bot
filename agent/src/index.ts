@@ -450,7 +450,7 @@ async function main() {
         }
     });
 
-    console.log("🚀 Rector Protocol Active");
+    console.log("🚀 Rector Protocol Active (v1.1.0-hotfix)");
 }
 
 if (import.meta.url === `file://${process.argv[1]}` || process.env.NODE_ENV === "production") {

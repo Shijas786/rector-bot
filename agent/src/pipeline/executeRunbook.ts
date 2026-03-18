@@ -38,8 +38,9 @@ export async function executeRunbook(runbookMarkdown: string): Promise<RunbookEx
 
     for (const step of steps) {
         try {
+            console.log(`[Runbook] Executing Step #${step.id} (Type: ${step.type})`);
             let result: StepResult;
-
+            
             if (step.type === "api_call" && step.source.includes("binance")) {
                 result = await executeBinanceStep(step);
             } else if (step.type === "kline_check") {
@@ -79,6 +80,8 @@ export async function executeRunbook(runbookMarkdown: string): Promise<RunbookEx
                     error: `Unsupported step type: ${step.type}`,
                 };
             }
+            
+            console.log(`[Runbook] Result #${step.id}: ${result.passed ? "PASSED" : "FAILED"} - ${result.finding}`);
 
             results.push(result);
         } catch (error: any) {
