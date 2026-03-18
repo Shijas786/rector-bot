@@ -191,22 +191,50 @@ export async function analyseWallet(address: string): Promise<string> {
         ]);
 
         const totalValue = portfolio?.data?.attributes?.total?.positions || portfolio?.data?.attributes?.total?.value || 0;
+        
+        // Extract Chain Breakdown
+        const chains = portfolio?.data?.attributes?.chains || {};
+        const chainBreakdown = Object.entries(chains)
+            .map(([name, data]: [string, any]) => ({
+                name: name.charAt(0).toUpperCase() + name.slice(1),
+                value: data?.value || data?.positions || 0
+            }))
+            .filter(c => c.value > 0.01)
+            .sort((a, b) => b.value - a.value);
+
+        const chainList = chainBreakdown.length > 0
+            ? chainBreakdown.map(c => `• **${c.name}**: $${c.value.toLocaleString()}`).join("\n")
+            : "No chain data found.";
+
         const topPositions = (positions?.data || [])
-            .slice(0, 5)
+            .slice(0, 15) // Show top 15 instead of 5
             .map((p: any) => ({
                 name: p.attributes?.name || "Unknown",
                 value: p.attributes?.value || 0,
-                symbol: p.attributes?.fungible_info?.symbol || ""
-            }));
+                symbol: p.attributes?.fungible_info?.symbol || "",
+                price: p.attributes?.fungible_info?.implementations?.[0]?.price || 0
+            }))
+            .filter((p: any) => p.value > 0.01);
 
         const assetsList = topPositions.length > 0 
-            ? topPositions.map((p: any) => `• ${p.name} (${p.symbol}): $${p.value.toLocaleString()}`).join("\n")
+            ? topPositions.map((p: any) => `• **${p.name}** (${p.symbol}): $${p.value.toLocaleString()}`).join("\n")
             : "No significant positions found.";
 
-        return `Total Portfolio Value: **$${totalValue.toLocaleString()}**
+        return `💰 **RECTOR: PORTFOLIO SUMMARY** 🛡️
+━━━━━━━━━━━━━━━━━━━━━━━━
+📍 **Address:** \`${address}\`
+━━━━━━━━━━━━━━━━━━━━━━━━
 
-**Top Assets:**
-${assetsList}`;
+💎 **Total Net Worth:** **$${totalValue.toLocaleString()}**
+
+📊 **Chain Distribution:**
+${chainList}
+
+🚀 **Top Assets:**
+${assetsList}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+*(Real-time sync enabled. Data powered by Zerion)*`;
     } catch (error: any) {
         console.error("[Zerion Error]", error.message);
         throw new Error(`Zerion Analysis Failed: ${error.message}`);
