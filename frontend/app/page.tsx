@@ -93,27 +93,27 @@ export default function HomePage() {
   const heroPredictions = [
     {
       ifText: "Tesla stock doubles this year",
-      ifIcon: "/Users/shijas/.gemini/antigravity/brain/8c29d555-0a62-4cd4-a456-ca12adc00d02/tesla_logo_circle_1773816707092.png",
+      ifIcon: "/icons/tesla.png",
       thenText: "donate $500 to FIRE Foundation",
-      thenIcon: "/Users/shijas/.gemini/antigravity/brain/8c29d555-0a62-4cd4-a456-ca12adc00d02/heart_charity_circle_1773816792158.png"
+      thenIcon: "/icons/charity.png"
     },
     {
       ifText: "Bitcoin hits $100,000",
-      ifIcon: "/Users/shijas/.gemini/antigravity/brain/8c29d555-0a62-4cd4-a456-ca12adc00d02/bitcoin_logo_circle_1773816806695.png",
+      ifIcon: "/icons/bitcoin.png",
       thenText: "send 1.5 BNB to @alpha_vault",
-      thenIcon: "/Users/shijas/.gemini/antigravity/brain/8c29d555-0a62-4cd4-a456-ca12adc00d02/media__1773637137219.png" // Placeholder or similar
+      thenIcon: "/icons/alpha.png"
     },
     {
       ifText: "Apple releases Foldable iPhone",
-      ifIcon: "/Users/shijas/.gemini/antigravity/brain/8c29d555-0a62-4cd4-a456-ca12adc00d02/apple_logo_circle_1773816778312.png",
+      ifIcon: "/icons/apple.png",
       thenText: "auto-buy 10 shares of AAPL",
-      thenIcon: "/Users/shijas/.gemini/antigravity/brain/8c29d555-0a62-4cd4-a456-ca12adc00d02/apple_logo_circle_v2_1773816829786.png"
+      thenIcon: "/icons/apple.png"
     },
     {
       ifText: "ETH reaches $5,000",
-      ifIcon: "/Users/shijas/.gemini/antigravity/brain/8c29d555-0a62-4cd4-a456-ca12adc00d02/eth_logo_circle_v2_1773817030753.png",
+      ifIcon: "/icons/eth.png",
       thenText: "unlock 'Whale' status badge",
-      thenIcon: "/Users/shijas/.gemini/antigravity/brain/8c29d555-0a62-4cd4-a456-ca12adc00d02/final_project_success_verification_1773733447543.webp"
+      thenIcon: "/icons/success.webp"
     }
   ];
 
