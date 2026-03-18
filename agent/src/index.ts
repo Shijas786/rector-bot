@@ -363,6 +363,8 @@ Please try again with a longer timeframe (e.g. "at least 15 minutes").`);
             runbookRef
         );
 
+        const gatewayUrl = runbookRef.replace("gnfd://", "https://gnfd-testnet-sp1.bnbchain.org/view/");
+        
         return `🏆 **RECTOR: TRANSACTION CONFIRMED** 🚀
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📜 **History Entry:** #${predictionId}
@@ -370,7 +372,7 @@ Please try again with a longer timeframe (e.g. "at least 15 minutes").`);
 🎯 **Status:** ON-CHAIN ATTESTED
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-✅ **RUNBOOK:** [View on BNB Greenfield](${runbookRef})
+✅ **RUNBOOK:** [View on BNB Greenfield](${gatewayUrl})
 ✅ **PROOF:** [LIVE ON BSC](https://testnet.bscscan.com/tx/${txHash})
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
