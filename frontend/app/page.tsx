@@ -88,6 +88,41 @@ export default function HomePage() {
   const [messages, setMessages] = useState<{ role: 'user' | 'rector', text: string, runbookClaim?: string }[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [predictionIdx, setPredictionIdx] = useState(0);
+
+  const heroPredictions = [
+    {
+      ifText: "Tesla stock doubles this year",
+      ifIcon: "/Users/shijas/.gemini/antigravity/brain/8c29d555-0a62-4cd4-a456-ca12adc00d02/tesla_logo_circle_1773816707092.png",
+      thenText: "donate $500 to FIRE Foundation",
+      thenIcon: "/Users/shijas/.gemini/antigravity/brain/8c29d555-0a62-4cd4-a456-ca12adc00d02/heart_charity_circle_1773816792158.png"
+    },
+    {
+      ifText: "Bitcoin hits $100,000",
+      ifIcon: "/Users/shijas/.gemini/antigravity/brain/8c29d555-0a62-4cd4-a456-ca12adc00d02/bitcoin_logo_circle_1773816806695.png",
+      thenText: "send 1.5 BNB to @alpha_vault",
+      thenIcon: "/Users/shijas/.gemini/antigravity/brain/8c29d555-0a62-4cd4-a456-ca12adc00d02/media__1773637137219.png" // Placeholder or similar
+    },
+    {
+      ifText: "Apple releases Foldable iPhone",
+      ifIcon: "/Users/shijas/.gemini/antigravity/brain/8c29d555-0a62-4cd4-a456-ca12adc00d02/apple_logo_circle_1773816778312.png",
+      thenText: "auto-buy 10 shares of AAPL",
+      thenIcon: "/Users/shijas/.gemini/antigravity/brain/8c29d555-0a62-4cd4-a456-ca12adc00d02/apple_logo_circle_v2_1773816829786.png"
+    },
+    {
+      ifText: "ETH reaches $5,000",
+      ifIcon: "/Users/shijas/.gemini/antigravity/brain/8c29d555-0a62-4cd4-a456-ca12adc00d02/eth_logo_circle_v2_1773817030753.png",
+      thenText: "unlock 'Whale' status badge",
+      thenIcon: "/Users/shijas/.gemini/antigravity/brain/8c29d555-0a62-4cd4-a456-ca12adc00d02/final_project_success_verification_1773733447543.webp"
+    }
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPredictionIdx(prev => (prev + 1) % heroPredictions.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
   const [isRecording, setIsRecording] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [webUserId] = useState(() => "web-user-" + Math.random().toString(36).substring(7));
@@ -198,33 +233,35 @@ export default function HomePage() {
     <div className="container" style={{ paddingBottom: "6rem" }}>
       {/* ── Hero Section ── */}
       <section className="text-center" style={{ marginTop: "10vh", marginBottom: "15vh" }}>
-        <div className="btn-badge mb-4">PLAY WITH THE FUTURE</div>
-        <h1 className="hero-title" style={{ fontSize: "clamp(2.5rem, 8vw, 4.5rem)" }}>Agentic Verification</h1>
-        <h2 style={{ fontSize: "1.5rem", fontWeight: "400", color: "var(--text-secondary)", marginBottom: "2rem", marginTop: "-1rem" }}>via Claim Runbook</h2>
-        <p style={{ color: "var(--text-secondary)", maxWidth: "700px", margin: "0 auto 3rem auto", fontSize: "1.1rem", lineHeight: "1.6" }}>
-          Rector shifts oracles from slow, coordination-heavy disputes to fast, agentic verification. Every claim is paired with an explicit verification plan—a <strong style={{ color: "var(--yellow)" }}>Claim Runbook</strong>—executed automatically on-chain.
-        </p>
-
-        <div className="logic-block">
-          <div className="logic-row">
-            <span className="logic-label">If</span>
-            <div className="logic-input">
-              <div className="pfp-sm" style={{ background: "linear-gradient(135deg, #F3BA2F, #e2a822)" }}></div>
-              <span>BTC hits $100k</span>
+        <h1 className="hero-title" style={{ fontSize: "clamp(3rem, 10vw, 5.5rem)", marginBottom: "3rem" }}>Play with the Future</h1>
+        
+        <div className="logic-container">
+          {/* IF Block */}
+          <div key={`if-${predictionIdx}`} className="logic-box" style={{ animation: "fadeIn 0.5s ease" }}>
+            <span className="logic-box-label">IF</span>
+            <div className="logic-box-content">
+              <div className="logic-icon-circle">
+                <img src={heroPredictions[predictionIdx].ifIcon} alt="Icon" />
+              </div>
+              <div className="logic-box-text">{heroPredictions[predictionIdx].ifText}</div>
             </div>
           </div>
-          <div className="logic-row">
-            <span className="logic-label">Result</span>
-            <div className="logic-input">
-              <div className="pfp-ai">AI</div>
-              <span>Resolved Verified Proof</span>
+
+          {/* THEN Block */}
+          <div key={`then-${predictionIdx}`} className="logic-box" style={{ animation: "fadeIn 0.5s ease 0.2s both" }}>
+            <span className="logic-box-label">THEN</span>
+            <div className="logic-box-content">
+              <div className="logic-icon-circle">
+                <img src={heroPredictions[predictionIdx].thenIcon} alt="Action" />
+              </div>
+              <div className="logic-box-text">{heroPredictions[predictionIdx].thenText}</div>
             </div>
           </div>
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", gap: "1rem" }}>
-          <button onClick={() => document.getElementById('create-claim')?.scrollIntoView({ behavior: 'smooth' })} className="btn btn-primary">Start Claiming</button>
-          <a href="#feed" className="btn btn-secondary">Explore Live Feed</a>
+          <button className="btn" style={{ background: '#fff', color: '#000', padding: '0.75rem 2rem', fontWeight: '600' }}>Learn More</button>
+          <button onClick={() => document.getElementById('create-claim')?.scrollIntoView({ behavior: 'smooth' })} className="btn btn-secondary" style={{ padding: '0.75rem 2rem' }}>Make a Claim</button>
         </div>
       </section>
 
