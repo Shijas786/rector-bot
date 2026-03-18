@@ -156,8 +156,16 @@ function parseRunbookSteps(markdown: string): ParsedStep[] {
 
         const typeMatch = body.match(/(?:Type|\*\*Type\*\*)\*?:\s*(\w+)/i);
         
-        // Permissive source matching: Source:, **Source:**, or 1. **Fetch Data**:
-        const sourceMatch = body.match(/(?:Source|\*\*Source\*\*|Fetch Data)\*?:\s*(https?:\/\/[^\s\n]+|0x[a-fA-F0-9]+)/i);
+        // Permissive source matching: Find URL or 0x address anywhere after the label
+        const sourceMatch = body.match(/(?:Source|\*\*Source\*\*|Fetch Data)\*?:\s*.*?(https?:\/\/[^\s\n]+|0x[a-fA-F0-9]{40})/i);
+        
+        // Fallback: If no explicit source label, grab the first 0x address or URL in the body
+        let source = sourceMatch?.[1]?.trim() || "";
+        if (!source) {
+            const fallbackAddr = body.match(/0x[a-fA-F0-9]{40}/);
+            const fallbackUrl = body.match(/https?:\/\/[^\s\n]+/);
+            source = fallbackAddr?.[0] || fallbackUrl?.[0] || "";
+        }
         
         const contractMatch = body.match(/Contract\*?:\s*(0x[a-fA-F0-9]+)/i);
         const extractMatch = body.match(/Extract\*?:\s*(.+)/i);
@@ -171,7 +179,7 @@ function parseRunbookSteps(markdown: string): ParsedStep[] {
         steps.push({
             id,
             type: typeMatch?.[1]?.trim().toLowerCase() || "unknown",
-            source: sourceMatch?.[1]?.trim() || contractMatch?.[1]?.trim() || "",
+            source: source || contractMatch?.[1]?.trim() || "",
             contract: contractMatch?.[1]?.trim(),
             eventId: eventIdMatch ? eventIdMatch[1] : undefined,
             extract: extractMatch?.[1]?.trim(),
@@ -441,6 +449,9 @@ async function executeGenericApiStep(step: ParsedStep): Promise<StepResult> {
 
 async function executeZerionWalletStep(step: ParsedStep): Promise<StepResult> {
     const address = step.source.trim();
+    if (!address || !address.startsWith("0x")) {
+        throw new Error("Missing or invalid wallet address for Zerion check");
+    }
     try {
         const portfolio = await getZerionWalletPortfolio(address);
         const totalValue = portfolio?.data?.attributes?.total?.positions || portfolio?.data?.attributes?.total?.value || 0;

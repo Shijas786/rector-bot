@@ -58,7 +58,7 @@ For claims about wallet balances, NFT ownership, or non-Binance token data:
 
 ### Step N [WALLET]
 - Type: wallet_check
-- Source: <wallet address>
+- Source: <wallet address> (Provide ONLY the 0x address)
 - Success: value >= <target USD value>
 
 ### Step N [NFT]
