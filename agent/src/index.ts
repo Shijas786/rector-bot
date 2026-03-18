@@ -195,8 +195,8 @@ export async function handleMessage(
             
             return `${disambiguationText}\n\n${runbookPreview}`;
         }
-    } catch (e) {
-        // Not a prediction or wallet, show welcome
+    } catch (e: any) {
+        console.error(`[handleMessage Fallback Error]`, e.message);
     }
 
     return handleHelp(user.shadowAddress);
