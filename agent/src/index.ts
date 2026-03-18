@@ -109,6 +109,13 @@ export async function handleMessage(
         return handleCheck(parseInt(idStr));
     }
 
+    if (trimmed === "/submit" || trimmed === "/confirm") {
+        if (state.awaitingConfirmation === "execute" && state.lastRunbook) {
+            return handleConfirmation(user.id, telegramId, state);
+        }
+        return "❌ Nothing to submit. Please type your prediction first!";
+    }
+
     if (trimmed === "/mywallet") {
         const provider = new ethers.JsonRpcProvider(process.env.BSC_RPC_URL || "https://bsc-dataseed.binance.org");
         const balance = await provider.getBalance(user.shadowAddress);
@@ -416,6 +423,7 @@ I transform claims into verifiable on-chain truths.
 **Commands:**
 /analyse BNB - Market analysis
 /predict ... - Submit a claim
+/confirm - Finalize and attest
 /mywallet - Check shadow balance
 /withdraw [addr] - Move winnings
 /check [id] - View on-chain proof
