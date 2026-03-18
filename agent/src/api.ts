@@ -37,6 +37,33 @@ process.on("uncaughtException", (err) => {
 const PORT = process.env.PORT || process.env.AGENT_API_PORT || 3001;
 
 
+// ─── Frontend Mapping Helper ────────────────────────────────────────────────
+const mapPredictionForFrontend = (p: any) => {
+    let status = "PENDING";
+    if (p.status === "RESOLVED") {
+        status = p.outcome ? "TRUE" : "FALSE";
+    } else if (p.status === "INCONCLUSIVE") {
+        status = "INCONCLUSIVE";
+    }
+
+    return {
+        id: p.id,
+        claim: p.claimText,
+        disambiguated: p.disambiguated || p.claimText,
+        runbookMarkdown: p.runbook,
+        evidenceJson: p.reasoning || p.evidenceRef || "No evidence provided.",
+        status,
+        createdAt: p.createdAt,
+        resolutionTimestamp: p.resolutionDate,
+        txHash: p.txHashResolve || p.txHashSubmit,
+        user: p.user ? {
+            username: p.user.username,
+            telegramId: p.user.telegramId,
+            shadowAddress: p.user.shadowAddress
+        } : undefined
+    };
+};
+
 // Health check
 app.get("/health", (_req, res) => {
     res.json({ status: "ok", service: "rector-agent" });
@@ -181,7 +208,7 @@ app.get("/predictions", async (req, res) => {
                 }
             }
         });
-        res.json(predictions);
+        res.json(predictions.map(mapPredictionForFrontend));
     } catch (error: any) {
         res.status(500).json({ error: error.message });
     }
@@ -208,7 +235,7 @@ app.get("/predictions/:id", async (req, res) => {
             return res.status(404).json({ error: "Prediction not found" });
         }
 
-        res.json(prediction);
+        res.json(mapPredictionForFrontend(prediction));
     } catch (error: any) {
         res.status(500).json({ error: error.message });
     }
