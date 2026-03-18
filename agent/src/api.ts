@@ -6,11 +6,13 @@ import {
     handlePredict,
     handleMessage,
     handleAnalyse,
+    handleConfirmation,
     extractResolutionDate,
     executePredictionPipeline,
     disambiguatePrediction,
     buildRunbook,
 } from "./index.js";
+import { SessionManager } from "./session.js";
 import { prisma } from "./db/prisma.js";
 import { mcpClient } from "./mcp/client.js";
 
@@ -106,7 +108,7 @@ app.get("/analyse/:symbol", async (req, res) => {
 // 3. Record Prediction (Disambiguate + Execute)
 app.post("/predict", async (req, res) => {
     try {
-        const { telegramId, username, claimText } = req.body;
+        const { telegramId, username, claimText, confirm } = req.body;
 
         if (!telegramId || !claimText) {
             return res.status(400).json({ error: "Missing required fields: telegramId, claimText" });
@@ -127,11 +129,17 @@ app.post("/predict", async (req, res) => {
             });
             console.log(`[API] Created shadow wallet for ${username}: ${wallet.address}`);
         } else if (username) {
-            user = await prisma.user.update({ where: { telegramId: String(telegramId) }, data: { username } }) as any;
+            user = (await prisma.user.update({ where: { telegramId: String(telegramId) }, data: { username } })) as any;
         }
 
-        // Disambiguate and return rich confirmation prompt
-        const resultMessage = await handlePredict(String(telegramId), claimText);
+        let resultMessage: string;
+        if (confirm) {
+            const state = await SessionManager.get(String(telegramId));
+            resultMessage = await handleConfirmation((user as any).id, String(telegramId), state);
+        } else {
+            // Disambiguate and return rich confirmation prompt
+            resultMessage = await handlePredict(String(telegramId), claimText);
+        }
 
         res.json({ message: resultMessage });
     } catch (error: any) {

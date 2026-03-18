@@ -171,7 +171,8 @@ export default function HomePage() {
         body: JSON.stringify({ 
           claimText,
           telegramId: webUserId,
-          username: "Web Explorer"
+          username: "Web Explorer",
+          confirm: true
         })
       });
       const data = await res.json();

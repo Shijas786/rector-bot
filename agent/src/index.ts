@@ -20,39 +20,7 @@ import * as chrono from "chrono-node";
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://rector.up.railway.app";
 
-// Database-backed Session Manager
-const SessionManager = {
-    async get(telegramId: string) {
-        const session = await (prisma as any).userSession.findUnique({ where: { telegramId } });
-        console.log(`[SessionManager] GET ${telegramId} -> ${session?.awaitingConfirmation || "none"}`);
-        return {
-            lastDisambiguation: session?.lastDisambiguation as any,
-            lastRunbook: session?.lastRunbook || undefined,
-            awaitingConfirmation: (session?.awaitingConfirmation as "predict" | "execute" | "alert") || undefined,
-        };
-    },
-    async set(telegramId: string, data: any) {
-        console.log(`[SessionManager] SET ${telegramId}`, JSON.stringify(data).substring(0, 100));
-        if (!data || Object.keys(data).length === 0) {
-            await (prisma as any).userSession.deleteMany({ where: { telegramId } });
-        } else {
-            await (prisma as any).userSession.upsert({
-                where: { telegramId },
-                update: {
-                    lastDisambiguation: data.lastDisambiguation || null,
-                    lastRunbook: data.lastRunbook || null,
-                    awaitingConfirmation: data.awaitingConfirmation || null,
-                },
-                create: {
-                    telegramId,
-                    lastDisambiguation: data.lastDisambiguation || null,
-                    lastRunbook: data.lastRunbook || null,
-                    awaitingConfirmation: data.awaitingConfirmation || null,
-                }
-            });
-        }
-    }
-};
+import { SessionManager } from "./session.js";
 
 // In-memory message deduplication cache
 const processedMessages = new Map<string, number>();
@@ -325,7 +293,7 @@ ${steps.join("\n")}
 **SHALL I PROCEED WITH ON-CHAIN SUBMISSION?**\n*(Click a button below or type **yes**)*`;
 }
 
-async function handleConfirmation(userId: string, telegramId: string, state: any): Promise<string> {
+export async function handleConfirmation(userId: string, telegramId: string, state: any): Promise<string> {
     if (state.awaitingConfirmation === "predict" && state.lastDisambiguation) {
         // Build runbook and SHOW PREVIEW first
         const runbook = await buildRunbook(state.lastDisambiguation, Date.now());
