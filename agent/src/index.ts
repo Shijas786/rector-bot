@@ -213,7 +213,7 @@ export async function handleMessage(
             const combined = `${disambiguationText}\n\n${runbookPreview}`;
 
             if (telegramId.startsWith("web-user-")) {
-                return combined;
+                return `${combined}\n\n**SHALL I PROCEED WITH THIS VERIFICATION PLAN?**\n(Type 'ok' or 'yes' to confirm)`;
             }
             
             await sendDirectTelegram(telegramId, combined, ["✅ YES, PROCEED", "❌ CANCEL"]);
