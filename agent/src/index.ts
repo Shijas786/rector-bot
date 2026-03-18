@@ -162,15 +162,19 @@ export async function handleMessage(
         const isNo = ["no", "n", "cancel", "stop", "abort", "dont", "❌ cancel"].includes(answer);
 
         if (isYes) {
+            // Optimistically clear the state to prevent double-clicks (race condition)
+            await SessionManager.set(telegramId, {});
+
             if (!telegramId.startsWith("web-user-")) {
                 // Background execution to prevent webhook timeout
                 (async () => {
                     try {
                         const result = await handleConfirmation(user.id, telegramId, state);
                         if (!result.includes("SHALL I PROCEED WITH ON-CHAIN SUBMISSION?")) {
-                            await SessionManager.set(telegramId, {});
                             await sendDirectTelegram(telegramId, result, []);
                         } else {
+                            // If it wasn't the final step, restore the session
+                            await SessionManager.set(telegramId, { ...state, awaitingConfirmation: "execute" });
                             await sendDirectTelegram(telegramId, result, ["✅ YES, PROCEED", "❌ CANCEL"]);
                         }
                     } catch (e: any) {
@@ -182,8 +186,8 @@ export async function handleMessage(
             }
 
             const result = await handleConfirmation(user.id, telegramId, state);
-            if (!result.includes("SHALL I PROCEED WITH ON-CHAIN SUBMISSION?")) {
-                await SessionManager.set(telegramId, {});
+            if (result.includes("SHALL I PROCEED WITH ON-CHAIN SUBMISSION?")) {
+                await SessionManager.set(telegramId, { ...state, awaitingConfirmation: "execute" });
             }
             return result;
         } else if (isNo) {
