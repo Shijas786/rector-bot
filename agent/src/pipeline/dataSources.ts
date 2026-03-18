@@ -148,21 +148,21 @@ export async function fetchZerion(path: string): Promise<any> {
  * Get wallet portfolio stats (total value, etc.)
  */
 export async function getZerionWalletPortfolio(address: string): Promise<any> {
-    return await fetchZerion(`wallets/${address}/portfolio`);
+    return await fetchZerion(`wallets/${address}/portfolio?sync=true`);
 }
 
 /**
  * Get list of fungible tokens in a wallet
  */
 export async function getZerionWalletPositions(address: string): Promise<any> {
-    return await fetchZerion(`wallets/${address}/positions`);
+    return await fetchZerion(`wallets/${address}/positions?sync=true`);
 }
 
 /**
  * Get list of NFTs in a wallet
  */
 export async function getZerionWalletNFTs(address: string): Promise<any> {
-    return await fetchZerion(`wallets/${address}/nft-positions`);
+    return await fetchZerion(`wallets/${address}/nft-positions?sync=true`);
 }
 
 /**
