@@ -162,21 +162,30 @@ export async function handleMessage(
         const isNo = ["no", "n", "cancel", "stop", "abort", "dont", "❌ cancel"].includes(answer);
 
         if (isYes) {
-            const result = await handleConfirmation(user.id, telegramId, state);
-            if (telegramId.startsWith("web-user-")) {
-                if (!result.includes("SHALL I PROCEED WITH ON-CHAIN SUBMISSION?")) {
-                    await SessionManager.set(telegramId, {});
-                }
-                return result;
+            if (!telegramId.startsWith("web-user-")) {
+                // Background execution to prevent webhook timeout
+                (async () => {
+                    try {
+                        const result = await handleConfirmation(user.id, telegramId, state);
+                        if (!result.includes("SHALL I PROCEED WITH ON-CHAIN SUBMISSION?")) {
+                            await SessionManager.set(telegramId, {});
+                            await sendDirectTelegram(telegramId, result, []);
+                        } else {
+                            await sendDirectTelegram(telegramId, result, ["✅ YES, PROCEED", "❌ CANCEL"]);
+                        }
+                    } catch (e: any) {
+                        console.error("[BG Error]", e.message);
+                        await sendDirectTelegram(telegramId, `❌ **PROTOCOL ERROR**\n${e.message}`, []);
+                    }
+                })();
+                return "🔄 **Rector: Processing your confirmation...**\n*(This takes ~15s for Greenfield+BSC)*";
             }
 
+            const result = await handleConfirmation(user.id, telegramId, state);
             if (!result.includes("SHALL I PROCEED WITH ON-CHAIN SUBMISSION?")) {
                 await SessionManager.set(telegramId, {});
-                await sendDirectTelegram(telegramId, result, []);
-            } else {
-                await sendDirectTelegram(telegramId, result, ["✅ YES, PROCEED", "❌ CANCEL"]);
             }
-            return ""; 
+            return result;
         } else if (isNo) {
             await SessionManager.set(telegramId, {});
             const cancelMsg = "Okay, cancelled. Type /help to see what I can do.";
@@ -216,8 +225,11 @@ export async function handleMessage(
                 return `${combined}\n\n**SHALL I PROCEED WITH THIS VERIFICATION PLAN?**\n(Type 'ok' or 'yes' to confirm)`;
             }
             
-            await sendDirectTelegram(telegramId, combined, ["✅ YES, PROCEED", "❌ CANCEL"]);
-            return "";
+            // Background response for Telegram to avoid timeout
+            (async () => {
+                await sendDirectTelegram(telegramId, combined, ["✅ YES, PROCEED", "❌ CANCEL"]);
+            })();
+            return "🔄 **Rector: Building Verification Plan...**";
         }
     } catch (e: any) {
         console.error(`[handleMessage Fallback Error]`, e.message);
@@ -272,8 +284,15 @@ export async function handlePredict(telegramId: string, claim: string): Promise<
         const runbookPreview = formatRunbookPreview(runbook);
         
         const combined = `${disambiguationText}\n\n${runbookPreview}`;
-        await sendDirectTelegram(telegramId, combined, ["✅ YES, PROCEED", "❌ CANCEL"]);
-        return "";
+        
+        if (telegramId.startsWith("web-user-")) {
+            return combined;
+        }
+
+        (async () => {
+            await sendDirectTelegram(telegramId, combined, ["✅ YES, PROCEED", "❌ CANCEL"]);
+        })();
+        return "🔄 **Rector: Analysing Prediction...**";
     } catch (error: any) {
         return `❌ Could not process prediction.`;
     }
@@ -299,7 +318,7 @@ ${steps.join("\n")}
 *Attesting core logic to BSC...*
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-**SHALL I PROCEED WITH ON-CHAIN SUBMISSION?** (**yes/no**)`;
+**SHALL I PROCEED WITH ON-CHAIN SUBMISSION?**\n*(Click a button below or type **yes**)*`;
 }
 
 async function handleConfirmation(userId: string, telegramId: string, state: any): Promise<string> {
@@ -474,27 +493,40 @@ export async function sendDirectTelegram(telegramId: string, text: string, butto
         chat_id: telegramId,
         text: text,
         parse_mode: "Markdown",
-        disable_web_page_preview: false,
+        disable_web_page_preview: true,
     };
 
     if (buttons.length > 0) {
         payload.reply_markup = {
             keyboard: buttons.map(b => [{ text: b }]),
-            one_time_keyboard: true,
-            resize_keyboard: true
+            one_time_keyboard: false,
+            resize_keyboard: true,
+            selective: true
         };
     } else {
         payload.reply_markup = { remove_keyboard: true };
     }
 
     try {
-        const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        const url = `https://api.telegram.org/bot${token}/sendMessage`;
+        const res = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
         });
         const data = await res.json();
-        if (!data.ok) console.error("[Telegram Error]", data);
+        if (!data.ok) {
+            console.error("[Telegram Error]", JSON.stringify(data));
+            // If Markdown fails, try plain text
+            if (data.description?.includes("can't parse entities")) {
+                payload.parse_mode = undefined;
+                await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+            }
+        }
     } catch (e: any) {
         console.error("[Telegram Fetch Error]", e.message);
     }
