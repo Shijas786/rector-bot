@@ -31,7 +31,7 @@ export default function RootLayout({
             <a href="/" className="logo">Rector</a>
 
             <div className="nav-actions">
-              <a href="https://t.me/RectorBot" target="_blank" rel="noopener" className="btn btn-secondary">
+              <a href="https://t.me/RectorBsc_bot" target="_blank" rel="noopener" className="btn btn-secondary">
                 <span style={{ display: 'inline-block', width: '8px', height: '8px', background: 'var(--yellow)', borderRadius: '50%', marginRight: '8px' }}></span>
                 LIVE BOT
               </a>
