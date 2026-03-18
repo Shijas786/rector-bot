@@ -40,6 +40,8 @@ Your job is to rewrite this as a precise, mathematically and temporally verifiab
 Extract: key entities, success criteria, and any ambiguities.
 Rate verifiability: HIGH / MEDIUM / LOW.
 
+CRITICAL RULE: DO NOT alter or assume numerical values! If the user specifies a number, price, or portfolio value (e.g., "900$", "100k", "zero"), you MUST preserve that EXACT value in your disambiguated statement. NEVER hallucinate "zero" unless the user explicitly said "zero".
+
 Suggest the best verification source:
 - If it's about crypto prices on exchanges: prefer "binance_api" or "coingecko"
 - If it's about real-world events, politics, or pop-culture: prefer "polymarket_api"
