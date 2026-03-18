@@ -199,28 +199,46 @@ export async function analyseWallet(address: string): Promise<string> {
                 name: name.charAt(0).toUpperCase() + name.slice(1),
                 value: data?.value || data?.positions || 0
             }))
-            .filter(c => c.value > 0.01)
+            .filter(c => c.value > 0.1) // Filter tiny dust
             .sort((a, b) => b.value - a.value);
 
         const chainList = chainBreakdown.length > 0
             ? chainBreakdown.map(c => `• **${c.name}**: $${c.value.toLocaleString()}`).join("\n")
             : "No chain data found.";
 
-        const topPositions = (positions?.data || [])
-            .slice(0, 15) // Show top 15 instead of 5
-            .map((p: any) => ({
+        // Process Positions with LP Grouping
+        const rawPositions = positions?.data || [];
+        const groups: Record<string, any[]> = {};
+        const ungrouped: any[] = [];
+
+        for (const p of rawPositions) {
+            const attr = p.attributes;
+            if (attr?.group_id) {
+                if (!groups[attr.group_id]) groups[attr.group_id] = [];
+                groups[attr.group_id].push(p);
+            } else {
+                ungrouped.push(p);
+            }
+        }
+
+        const consolidated = [
+            ...Object.values(groups).map(g => {
+                const names = g.map(p => p.attributes?.fungible_info?.symbol || "TOKEN").join("/");
+                const totalVal = g.reduce((sum, p) => sum + (p.attributes?.value || 0), 0);
+                return { name: `${names} LP`, value: totalVal, symbol: "LP" };
+            }),
+            ...ungrouped.map(p => ({
                 name: p.attributes?.name || "Unknown",
                 value: p.attributes?.value || 0,
-                symbol: p.attributes?.fungible_info?.symbol || "",
-                price: p.attributes?.fungible_info?.implementations?.[0]?.price || 0
+                symbol: p.attributes?.fungible_info?.symbol || ""
             }))
-            .filter((p: any) => p.value > 0.01);
+        ].filter(p => p.value > 0.01).sort((a, b) => b.value - a.value);
 
-        const assetsList = topPositions.length > 0 
-            ? topPositions.map((p: any) => `• **${p.name}** (${p.symbol}): $${p.value.toLocaleString()}`).join("\n")
-            : "No significant positions found.";
+        const assetsList = consolidated.slice(0, 15)
+            .map((p: any) => `• **${p.name}** (${p.symbol}): $${p.value.toLocaleString()}`).join("\n")
+            || "No significant positions found.";
 
-        return `💰 **RECTOR: PORTFOLIO SUMMARY** 🛡️
+        return `💰 **RECTOR: INSTITUTIONAL PORTFOLIO** 🛡️
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📍 **Address:** \`${address}\`
 ━━━━━━━━━━━━━━━━━━━━━━━━
@@ -230,11 +248,11 @@ export async function analyseWallet(address: string): Promise<string> {
 📊 **Chain Distribution:**
 ${chainList}
 
-🚀 **Top Assets:**
+🚀 **Top Assets & LP Pairs:**
 ${assetsList}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
-*(Real-time sync enabled. Data powered by Zerion)*`;
+*(Real-time LP grouping & sync enabled)*`;
     } catch (error: any) {
         console.error("[Zerion Error]", error.message);
         throw new Error(`Zerion Analysis Failed: ${error.message}`);
