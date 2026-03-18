@@ -163,18 +163,24 @@ export async function handleMessage(
 
         if (isYes) {
             const result = await handleConfirmation(user.id, telegramId, state);
-            // Single turn flow: handleConfirmation returns the final receipt or a preview
-            // If it's the preview for 'execute' (roadmap + claim), last message asks "SHALL I PROCEED...?"
+            if (telegramId.startsWith("web-user-")) {
+                if (!result.includes("SHALL I PROCEED WITH ON-CHAIN SUBMISSION?")) {
+                    await SessionManager.set(telegramId, {});
+                }
+                return result;
+            }
+
             if (!result.includes("SHALL I PROCEED WITH ON-CHAIN SUBMISSION?")) {
                 await SessionManager.set(telegramId, {});
-                await sendDirectTelegram(telegramId, result, []); // Clear keyboard with new message
+                await sendDirectTelegram(telegramId, result, []);
             } else {
                 await sendDirectTelegram(telegramId, result, ["✅ YES, PROCEED", "❌ CANCEL"]);
             }
-            return ""; // Intercept and send via direct bot API for markup
+            return ""; 
         } else if (isNo) {
             await SessionManager.set(telegramId, {});
             const cancelMsg = "Okay, cancelled. Type /help to see what I can do.";
+            if (telegramId.startsWith("web-user-")) return cancelMsg;
             await sendDirectTelegram(telegramId, cancelMsg, []);
             return "";
         }
@@ -204,8 +210,12 @@ export async function handleMessage(
             
             const disambiguationText = formatDisambiguation(disambiguation);
             const runbookPreview = formatRunbookPreview(runbook);
-            
             const combined = `${disambiguationText}\n\n${runbookPreview}`;
+
+            if (telegramId.startsWith("web-user-")) {
+                return combined;
+            }
+            
             await sendDirectTelegram(telegramId, combined, ["✅ YES, PROCEED", "❌ CANCEL"]);
             return "";
         }
