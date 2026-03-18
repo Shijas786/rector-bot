@@ -109,7 +109,7 @@ export async function executeRunbook(runbookMarkdown: string): Promise<RunbookEx
             decision: overallOutcome ? "YES" : "NO",
             reasoning: proofNarrative,
             verificationPipeline: "OpenClaw-Rector",
-            evidenceLog: results.map(r => ({
+            evidenceLog: results.map((r: StepResult) => ({
                 step: r.stepId,
                 source: r.source,
                 finding: r.finding,
@@ -127,10 +127,10 @@ function summarizeResults(results: StepResult[]): string {
     const failedSteps = results.filter(r => !r.passed);
 
     if (failedSteps.length === 0) {
-        return `Verification successful across all ${results.length} steps. Primary findings: ${results.map(r => r.finding).join("; ")}.`;
+        return `Verification successful across all ${results.length} steps. Primary findings: ${results.map((r: StepResult) => r.finding).join("; ")}.`;
     }
 
-    return `Verification failed. ${failedSteps.length} of ${results.length} steps did not meet successful criteria. Failed findings: ${failedSteps.map(r => r.finding).join("; ")}.`;
+    return `Verification failed. ${failedSteps.length} of ${results.length} steps did not meet successful criteria. Failed findings: ${failedSteps.map((r: StepResult) => r.finding).join("; ")}.`;
 }
 
 interface ParsedStep {
@@ -453,8 +453,22 @@ async function executeZerionWalletStep(step: ParsedStep): Promise<StepResult> {
         throw new Error("Missing or invalid wallet address for Zerion check");
     }
     try {
-        const portfolio = await getZerionWalletPortfolio(address);
+        const [portfolio, positions] = await Promise.all([
+            getZerionWalletPortfolio(address),
+            getZerionWalletPositions(address)
+        ]);
+
         const totalValue = portfolio?.data?.attributes?.total?.positions || portfolio?.data?.attributes?.total?.value || 0;
+        
+        // Extract top 3 positions for evidence transparency
+        const top3 = (positions?.data || [])
+            .slice(0, 3)
+            .map((p: any) => `${p.attributes?.fungible_info?.symbol || "TOKEN"}: $${Math.round(p.attributes?.value || 0)}`)
+            .join(", ");
+
+        const finding = top3 
+            ? `Wallet = $${totalValue.toLocaleString()} (Top: ${top3})`
+            : `Wallet portfolio value = $${totalValue.toLocaleString()}`;
 
         return {
             stepId: step.id,
@@ -462,7 +476,7 @@ async function executeZerionWalletStep(step: ParsedStep): Promise<StepResult> {
             source: `Zerion Wallet: ${address}`,
             value: totalValue,
             passed: evaluateSuccess(step.successCondition || "", totalValue),
-            finding: `Wallet portfolio value = $${totalValue.toFixed(2)}`,
+            finding: finding,
             error: null,
         };
     } catch (e: any) {
