@@ -214,27 +214,7 @@ export async function handleMessage(
             return handleHelp(user.shadowAddress);
         }
 
-        const resolutionDate = extractResolutionDate(trimmed);
-        const disambiguation = await disambiguatePrediction(trimmed, resolutionDate);
-
-        if (disambiguation.disambiguated) {
-            const runbook = await buildRunbook(disambiguation, Date.now());
-            await SessionManager.set(telegramId, { lastDisambiguation: disambiguation, lastRunbook: runbook, awaitingConfirmation: "execute" });
-            
-            const disambiguationText = formatDisambiguation(disambiguation);
-            const runbookPreview = formatRunbookPreview(runbook);
-            const combined = `${disambiguationText}\n\n${runbookPreview}`;
-
-            if (telegramId.startsWith("web-user-")) {
-                return `${combined}\n\n**SHALL I PROCEED WITH THIS VERIFICATION PLAN?**\n(Type 'ok' or 'yes' to confirm)`;
-            }
-            
-            // Background response for Telegram to avoid timeout
-            (async () => {
-                await sendDirectTelegram(telegramId, combined, ["✅ YES, PROCEED", "❌ CANCEL"]);
-            })();
-            return "🔄 **Rector: Building Verification Plan...**";
-        }
+        return handlePredict(telegramId, trimmed);
     } catch (e: any) {
         console.error(`[handleMessage Fallback Error]`, e.message);
     }
@@ -277,29 +257,37 @@ I couldn't find market data for \`${symbol.toUpperCase()}\`.
 }
 
 export async function handlePredict(telegramId: string, claim: string): Promise<string> {
-    try {
-        const resolutionDate = extractResolutionDate(claim);
-        const disambiguation = await disambiguatePrediction(claim, resolutionDate);
-        const runbook = await buildRunbook(disambiguation, Date.now());
-        
-        await SessionManager.set(telegramId, { lastDisambiguation: disambiguation, lastRunbook: runbook, awaitingConfirmation: "execute" });
-        
-        const disambiguationText = formatDisambiguation(disambiguation);
-        const runbookPreview = formatRunbookPreview(runbook);
-        
-        const combined = `${disambiguationText}\n\n${runbookPreview}`;
-        
-        if (telegramId.startsWith("web-user-")) {
-            return combined;
+    if (telegramId.startsWith("web-user-")) {
+        try {
+            const resolutionDate = extractResolutionDate(claim);
+            const disambiguation = await disambiguatePrediction(claim, resolutionDate);
+            const runbook = await buildRunbook(disambiguation, Date.now());
+            await SessionManager.set(telegramId, { lastDisambiguation: disambiguation, lastRunbook: runbook, awaitingConfirmation: "execute" });
+            const combined = `${formatDisambiguation(disambiguation)}\n\n${formatRunbookPreview(runbook)}`;
+            return `${combined}\n\n**SHALL I PROCEED WITH THIS VERIFICATION PLAN?**\n(Type 'ok' or 'yes' to confirm)`;
+        } catch (error: any) {
+            return `❌ Could not process prediction: ${error.message}`;
         }
-
-        (async () => {
-            await sendDirectTelegram(telegramId, combined, ["✅ YES, PROCEED", "❌ CANCEL"]);
-        })();
-        return "🔄 **Rector: Analysing Prediction...**";
-    } catch (error: any) {
-        return `❌ Could not process prediction.`;
     }
+
+    // Telegram User: Background execution to prevent webhook timeouts and retry loops
+    (async () => {
+        try {
+            const resolutionDate = extractResolutionDate(claim);
+            const disambiguation = await disambiguatePrediction(claim, resolutionDate);
+            if (disambiguation.disambiguated) {
+                const runbook = await buildRunbook(disambiguation, Date.now());
+                await SessionManager.set(telegramId, { lastDisambiguation: disambiguation, lastRunbook: runbook, awaitingConfirmation: "execute" });
+                const combined = `${formatDisambiguation(disambiguation)}\n\n${formatRunbookPreview(runbook)}`;
+                await sendDirectTelegram(telegramId, combined, ["✅ YES, PROCEED", "❌ CANCEL"]);
+            }
+        } catch (error: any) {
+            console.error("[BG Predict Error]", error.message);
+            await sendDirectTelegram(telegramId, `❌ **PROTOCOL ERROR**\n${error.message}`, []);
+        }
+    })();
+    
+    return "🔄 **Rector: Analysing Prediction & Building Runbook...**\n*(This takes ~15s)*";
 }
 
 /**
