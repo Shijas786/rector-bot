@@ -181,7 +181,7 @@ export default function HomePage() {
         <h1 className="hero-title" style={{ fontSize: "clamp(2.5rem, 8vw, 4.5rem)" }}>Agentic Verification</h1>
         <h2 style={{ fontSize: "1.5rem", fontWeight: "400", color: "var(--text-secondary)", marginBottom: "2rem", marginTop: "-1rem" }}>via Claim Runbook</h2>
         <p style={{ color: "var(--text-secondary)", maxWidth: "700px", margin: "0 auto 3rem auto", fontSize: "1.1rem", lineHeight: "1.6" }}>
-          Rector shifts oracles from slow, coordination-heavy disputes to fast, agentic verification. Every claim is paired with an explicit verification plan—a **Claim Runbook**—executed automatically on-chain.
+          Rector shifts oracles from slow, coordination-heavy disputes to fast, agentic verification. Every claim is paired with an explicit verification plan—a <strong style={{ color: "var(--yellow)" }}>Claim Runbook</strong>—executed automatically on-chain.
         </p>
 
         <div className="logic-block">
