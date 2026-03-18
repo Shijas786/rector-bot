@@ -14,7 +14,8 @@ node -e 'fetch("http://localhost:3001/message", { method: "POST", headers: { "Co
 1. **DO NOT** summarize the output. 
 2. **DO NOT** add your own commentary.
 3. **ONLY** output the string returned in the `message` field.
-4. If the user asks for market analysis, use the `/analyse` endpoint similarly.
+4. **MESSAGE FIDELITY**: In the API call, the `text` field MUST be exactly what the user sent. If they said "yes", send "yes". DO NOT add context.
+5. If the user asks for market analysis, use the `/analyse` endpoint similarly.
 5. For public Binance prices only, you may use \`web_fetch\`.
 
 ---

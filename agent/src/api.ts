@@ -20,6 +20,9 @@ app.use(express.json());
 // Request logging middleware
 app.use((req, res, next) => {
     console.log(`[API] ${req.method} ${req.url}`);
+    if (req.method === "POST") {
+        console.log(`[API-BODY]`, JSON.stringify(req.body, null, 2));
+    }
     next();
 });
 

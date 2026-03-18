@@ -3,11 +3,11 @@
     "services": {
         "openclaw-predictor-frontend": {
             "build": {
-                "builder": "NIXPACKS",
+                "builder": "DOCKERFILE",
+                "dockerfilePath": "frontend/Dockerfile",
                 "rootDirectory": "frontend"
             },
             "deploy": {
-                "startCommand": "PORT=3000 HOST=0.0.0.0 npm run start",
                 "healthcheckPath": "/",
                 "restartPolicyType": "ON_FAILURE"
             }

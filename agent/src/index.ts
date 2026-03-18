@@ -148,8 +148,8 @@ export async function handleMessage(
     // 2. Handle confirmation responses
     if (state.awaitingConfirmation) {
         const answer = text.trim().toLowerCase().replace(/[^a-z]/g, "");
-        const isYes = ["yes", "y", "confirm", "proceed", "ok", "okay"].includes(answer);
-        const isNo = ["no", "n", "cancel", "stop", "abort"].includes(answer);
+        const isYes = ["yes", "y", "confirm", "proceed", "ok", "okay", "submit", "approve", "doit", "go", "yesdoit"].includes(answer);
+        const isNo = ["no", "n", "cancel", "stop", "abort", "dont"].includes(answer);
 
         if (isYes) {
             const result = await handleConfirmation(user.id, telegramId, state);
@@ -173,6 +173,11 @@ export async function handleMessage(
         if (/^0x[a-fA-F0-9]{40}$/i.test(fuzzyAddress)) {
             await SessionManager.set(telegramId, {});
             return handleAnalyse(telegramId, fuzzyAddress);
+        }
+
+        // Guard: Don't try to disambiguate very short messages that aren't claims
+        if (trimmed.length < 5 || (trimmed.split(/\s+/).length < 2 && !trimmed.startsWith("0x"))) {
+            return handleHelp(user.shadowAddress);
         }
 
         const resolutionDate = extractResolutionDate(trimmed);
