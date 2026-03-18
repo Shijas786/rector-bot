@@ -208,10 +208,7 @@ export async function handleAnalyse(telegramId: string, symbol: string): Promise
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${analysis}
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-**DO YOU WANT TO PREDICT SOMETHING ABOUT THIS WALLET?**
-(e.g., "This wallet hits $5k by tomorrow")`;
+`;
         }
 
         const result = await analyseToken(cleanSymbol);

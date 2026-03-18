@@ -194,37 +194,25 @@ export async function analyseWallet(address: string): Promise<string> {
         const topPositions = (positions?.data || [])
             .slice(0, 5)
             .map((p: any) => ({
-                name: p.attributes?.name,
-                value: p.attributes?.value,
-                price: p.attributes?.price,
-                change: p.attributes?.changes?.absolute_1d
+                name: p.attributes?.name || "Unknown",
+                value: p.attributes?.value || 0,
+                symbol: p.attributes?.fungible_info?.symbol || ""
             }));
 
-        const prompt = `You are an elite "smart friend" portfolio analyst.
-        Analyze this wallet: ${address}
-        Total Value: $${totalValue.toLocaleString()}
-        Top Positions: ${JSON.stringify(topPositions)}
+        const assetsList = topPositions.length > 0 
+            ? topPositions.map((p: any) => `• ${p.name} (${p.symbol}): $${p.value.toLocaleString()}`).join("\n")
+            : "No significant positions found.";
 
-        Provide a brief (3-4 sentence) "AI Take" on this wallet's strategy and current standing. 
-        Tone: Insightful, casual, and pro-level.
-        
-        Format:
-        "Total Portfolio Value: $X
-        
-        AI Take:
-        [Your Analysis]
-        
-        Top Assets:
-        - Asset 1 ($Value)
-        - Asset 2 ($Value)"`;
+        const nextTarget = totalValue > 0 ? Math.ceil(totalValue * 1.5 / 100) * 100 : 1000;
 
-        const response = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [{ role: "user", content: prompt }],
-            temperature: 0.7,
-        });
+        return `Total Portfolio Value: **$${totalValue.toLocaleString()}**
 
-        return response.choices[0].message.content || "Could not analyze wallet.";
+**Top Assets:**
+${assetsList}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+**DO YOU WANT TO PREDICT SOMETHING ABOUT THIS WALLET?**
+(e.g., "This wallet hits $${nextTarget.toLocaleString()} by Friday")`;
     } catch (error: any) {
         console.error("[Zerion Error]", error.message);
         throw new Error(`Zerion Analysis Failed: ${error.message}`);
