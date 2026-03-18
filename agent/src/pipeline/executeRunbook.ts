@@ -434,7 +434,7 @@ async function executeGenericApiStep(step: ParsedStep): Promise<StepResult> {
 async function executeZerionWalletStep(step: ParsedStep): Promise<StepResult> {
     const address = step.source;
     const portfolio = await getZerionWalletPortfolio(address);
-    const totalValue = portfolio?.data?.attributes?.total?.value || 0;
+    const totalValue = portfolio?.data?.attributes?.total?.positions || portfolio?.data?.attributes?.total?.value || 0;
 
     return {
         stepId: step.id,

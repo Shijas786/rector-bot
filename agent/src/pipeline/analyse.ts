@@ -190,7 +190,7 @@ export async function analyseWallet(address: string): Promise<string> {
             getZerionWalletPositions(address)
         ]);
 
-        const totalValue = portfolio?.data?.attributes?.total?.value || 0;
+        const totalValue = portfolio?.data?.attributes?.total?.positions || portfolio?.data?.attributes?.total?.value || 0;
         const topPositions = (positions?.data || [])
             .slice(0, 5)
             .map((p: any) => ({
