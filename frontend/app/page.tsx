@@ -213,7 +213,33 @@ export default function HomePage() {
       const data = await res.json();
       
       if (data.message && (data.message.includes("CONFIRMED") || data.message.includes("#"))) {
-        setMessages(prev => [...prev, { role: 'rector', text: "✅ Claim Recorded Successfully! Re-syncing protocol feed..." }]);
+        const txHash = data.message.match(/tx\/([0-9a-fx]+)/i)?.[1] || "";
+        const gnfdUrl = data.message.match(/\((https:\/\/gnfd-testnet-sp1\.bnbchain\.org\/view\/[^\)]+)\)/)?.[1] || "";
+        
+        const successMsg = (
+          <div className="verif-links mt-4">
+            <span style={{ display: 'block', marginBottom: '0.5rem' }}>✅ Claim Recorded Successfully!</span>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {txHash && (
+                <a href={`https://testnet.bscscan.com/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="verif-btn bsc">
+                  View on BSC
+                </a>
+              )}
+              {gnfdUrl && (
+                <a href={gnfdUrl} target="_blank" rel="noopener noreferrer" className="verif-btn">
+                  View on Greenfield
+                </a>
+              )}
+            </div>
+          </div>
+        );
+
+        setMessages(prev => [...prev, { 
+          role: 'rector', 
+          text: "", // We use custom rendering for this
+          customContent: successMsg 
+        }]);
+        
         setStatusMessage("Success! Prediction is now live.");
         const apiBase = process.env.NEXT_PUBLIC_API_URL || "https://openclaw-predictor-agent-production.up.railway.app";
         const freshRes = await fetch(`${apiBase}/predictions`);
@@ -233,7 +259,7 @@ export default function HomePage() {
     <div className="container" style={{ paddingBottom: "6rem" }}>
       {/* ── Hero Section ── */}
       <section className="text-center" style={{ marginTop: "10vh", marginBottom: "15vh" }}>
-        <h1 className="hero-title" style={{ fontSize: "clamp(3rem, 10vw, 5.5rem)", marginBottom: "3rem" }}>Play with the Future</h1>
+        <h1 className="hero-title" style={{ fontSize: "clamp(2.5rem, 8vw, 4.5rem)", marginBottom: "3rem" }}>Play with the Future</h1>
         
         <div className="logic-container">
           {/* IF Block */}
@@ -320,9 +346,11 @@ export default function HomePage() {
             What claim would you like to verify on-chain today?
           </div>
 
-          {messages.map((msg, i) => (
+          {messages.map((msg: any, i) => (
             <div key={i} className={`chat-bubble ${msg.role}`}>
-              {msg.role === 'rector' && (msg.text.includes('# Prediction Runbook') || msg.text.includes('RunbookID:')) ? (
+              {msg.customContent ? (
+                msg.customContent
+              ) : msg.role === 'rector' && (msg.text.includes('# Prediction Runbook') || msg.text.includes('RunbookID:')) ? (
                 <RunbookPreview 
                   text={msg.text} 
                   claimText={msg.runbookClaim} 
@@ -389,35 +417,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ── List View for Mobile/Table ── */}
-      <div className="table-container mt-8">
-        <table>
-          <thead>
-            <tr>
-              <th>Claim</th>
-              <th>Status</th>
-              <th>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={3} className="text-center">Loading live claims...</td></tr>
-            ) : predictions.length === 0 ? (
-              <tr><td colSpan={3} className="text-center">No claims found. Start a claim on Telegram!</td></tr>
-            ) : (
-              predictions.map((p) => (
-                <tr key={p.id} onClick={() => window.location.href = `/predictions/${p.id}`} style={{ cursor: 'pointer' }}>
-                  <td>{p.disambiguated.substring(0, 80)}...</td>
-                  <td>
-                    <span className={`claim-card-status ${p.status.toLowerCase()}`}>{p.status}</span>
-                  </td>
-                  <td className="mono" style={{ fontSize: '0.75rem' }}>{new Date(p.createdAt).toLocaleDateString()}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 }
