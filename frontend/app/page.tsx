@@ -228,6 +228,50 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── How it Works Section ── */}
+      <section className="info-section">
+        <h2 className="info-heading">Make Claims that Resolve Automatically</h2>
+        
+        <div className="info-grid">
+          {/* List Card */}
+          <div className="info-card">
+            <h3>How it Works</h3>
+            <ul className="info-list">
+              <li>Make a claim</li>
+              <li>Create a verification runbook</li>
+              <li>Resolve automatically</li>
+              <li>Attest onchain</li>
+            </ul>
+          </div>
+
+          {/* Runbook Preview Card */}
+          <div className="info-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ margin: 0 }}>Claim Runbook</h3>
+              <div className="btn-badge" style={{ fontSize: '0.6rem', padding: '0.2rem 0.6rem', opacity: 0.6 }}>PREVIEW</div>
+            </div>
+            
+            <div className="runbook-mock">
+              <div className="header"># Claim Runbook</div>
+              
+              <div className="section">## Metadata</div>
+              <span className="item">- RunbookID: example-followers-500k</span>
+              <span className="item">- ResolveAt: 2026-06-01T00:00:00Z</span>
+              
+              <div className="section">## Decision</div>
+              <p style={{ margin: '0.5rem 0', fontStyle: 'italic', color: '#aaa' }}>
+                "The X (Twitter) account @example will have at least 500,000 followers."
+              </p>
+              
+              <div className="section">## Primary Verification</div>
+              <span className="item">- Primary source: https://x.com/example</span>
+              <span className="item">- Exact check: Read the follower count displayed on the profile page</span>
+              <span className="item">- Success condition: follower_count &gt;= 500,000</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Protocol Chat Interaction ── */}
       <section id="create-claim" className="mb-20" style={{ maxWidth: "800px", margin: "0 auto 10vh auto" }}>
         <div className="logic-label mb-8 text-center" style={{ letterSpacing: "0.2em" }}>PROTOCOL INTERFACE ACTIVE</div>

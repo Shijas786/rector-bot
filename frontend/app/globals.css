@@ -1004,6 +1004,98 @@ tr:last-child td {
   50% { transform: translateY(-4px); opacity: 1; }
 }
 
+/* ── Info / How it Works Styles ── */
+.info-section {
+  max-width: 1000px;
+  margin: 0 auto 15vh auto;
+  padding: 0 1rem;
+}
+
+.info-heading {
+  font-size: 2.2rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 4rem;
+  letter-spacing: -0.02em;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.info-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.info-card h3 {
+  font-size: 1.4rem;
+  margin-bottom: 2rem;
+  font-weight: 600;
+}
+
+.info-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.info-list li {
+  margin-bottom: 1.25rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 1.05rem;
+}
+
+.info-list li::before {
+  content: "•";
+  color: var(--text-secondary);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.runbook-mock {
+  background: #0d0d0d;
+  border-radius: 12px;
+  padding: 1.5rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.85rem;
+  color: #d1d1d1;
+  line-height: 1.5;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  flex-grow: 1;
+}
+
+.runbook-mock .header {
+  color: #888;
+  margin-bottom: 1rem;
+}
+
+.runbook-mock .section {
+  color: #fff;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.runbook-mock .item {
+  display: block;
+  margin-left: 1rem;
+}
+
+@media (max-width: 850px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── Trigger / Escrow Styles ── */
 .escrow-item:last-child {
   border-bottom: none !important;
