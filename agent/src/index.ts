@@ -54,6 +54,9 @@ const SessionManager = {
     }
 };
 
+// In-memory message deduplication cache
+const processedMessages = new Map<string, number>();
+
 /**
  * Process an incoming message from Rector/Telegram.
  */
@@ -62,6 +65,15 @@ export async function handleMessage(
     username: string,
     text: string
 ): Promise<string> {
+    const messageQueueKey = `${telegramId}:${text}`;
+    const now = Date.now();
+    // Drop duplicates received within 60 seconds (Telegram retries)
+    if (processedMessages.has(messageQueueKey) && (now - processedMessages.get(messageQueueKey)!) < 60000) {
+        console.log(`[handleMessage] Ignored duplicate message from ${telegramId}: "${text}"`);
+        return ""; // Return empty string to acknowledge without processing
+    }
+    processedMessages.set(messageQueueKey, now);
+
     console.log(`[handleMessage] @${username} (${telegramId}): "${text}"`);
     // Ensure user exists in DB with a Shadow Wallet
     const existingUser = await prisma.user.findUnique({ where: { telegramId } });
