@@ -24,6 +24,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "https://rector.up.railway.app"
 const SessionManager = {
     async get(telegramId: string) {
         const session = await (prisma as any).userSession.findUnique({ where: { telegramId } });
+        console.log(`[SessionManager] GET ${telegramId} -> ${session?.awaitingConfirmation || "none"}`);
         return {
             lastDisambiguation: session?.lastDisambiguation as any,
             lastRunbook: session?.lastRunbook || undefined,
@@ -31,6 +32,7 @@ const SessionManager = {
         };
     },
     async set(telegramId: string, data: any) {
+        console.log(`[SessionManager] SET ${telegramId}`, JSON.stringify(data).substring(0, 100));
         if (!data || Object.keys(data).length === 0) {
             await (prisma as any).userSession.deleteMany({ where: { telegramId } });
         } else {
@@ -60,6 +62,7 @@ export async function handleMessage(
     username: string,
     text: string
 ): Promise<string> {
+    console.log(`[handleMessage] @${username} (${telegramId}): "${text}"`);
     // Ensure user exists in DB with a Shadow Wallet
     const existingUser = await prisma.user.findUnique({ where: { telegramId } });
     let user: any;
