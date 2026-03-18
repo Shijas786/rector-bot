@@ -123,6 +123,14 @@ export async function getByAddress(address: string): Promise<number[]> {
 }
 
 /**
+ * Read native BNB balance for an address.
+ */
+export async function getNativeBalance(address: string): Promise<number> {
+    const balance = await provider.getBalance(address);
+    return Number(ethers.formatEther(balance));
+}
+
+/**
  * Read Chainlink price feed on BSC.
  */
 export async function readChainlinkPrice(feedAddress: string): Promise<number> {

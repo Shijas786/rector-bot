@@ -1,4 +1,4 @@
-import { readChainlinkPrice } from "../mcp/bsc.js";
+import { readChainlinkPrice, getNativeBalance } from "../mcp/bsc.js";
 import { getPolymarketEvent, getMarketOutcomeYesPrice } from "../mcp/polymarket.js";
 import { searchDuckDuckGo, searchNews, searchWikipedia, getZerionWalletPortfolio, getZerionWalletPositions, getZerionWalletNFTs, getZerionFungible } from "./dataSources.js";
 
@@ -50,12 +50,16 @@ export async function executeRunbook(runbookMarkdown: string): Promise<RunbookEx
                 result = await executeCoinGeckoStep(step);
             } else if (step.type === "api_call" && step.source.includes("polymarket.com")) {
                 result = await executePolymarketStep(step);
-            } else if (step.type === "wallet_check") {
+            } else if (step.type.includes("wallet") || step.type === "portfolio_check") {
                 result = await executeZerionWalletStep(step);
-            } else if (step.type === "nft_check") {
+            } else if (step.type.includes("nft")) {
                 result = await executeZerionNftStep(step);
-            } else if (step.type === "asset_check") {
+            } else if (step.type.includes("asset")) {
                 result = await executeZerionAssetStep(step);
+            } else if (step.type.includes("bscscan") || step.type === "native_check") {
+                result = await executeBscScanStep(step);
+            } else if (step.type.includes("cryptocompare")) {
+                result = await executeCryptoCompareStep(step);
             } else if (step.type === "web_search") {
                 result = await executeDuckDuckGoStep(step);
             } else if (step.type === "news_search") {
@@ -225,16 +229,17 @@ async function executeBinanceStep(step: ParsedStep): Promise<StepResult> {
 }
 
 async function executeBscStep(step: ParsedStep): Promise<StepResult> {
-    if (!step.contract) {
-        throw new Error("No contract address for BSC step");
+    const contract = step.contract || step.source;
+    if (!contract || !contract.startsWith("0x")) {
+        throw new Error("No valid contract address for BSC step");
     }
 
-    const rawPrice = await readChainlinkPrice(step.contract);
+    const rawPrice = await readChainlinkPrice(contract);
 
     return {
         stepId: step.id,
         type: step.type,
-        source: step.contract,
+        source: contract || "",
         value: rawPrice,
         passed: evaluateSuccess(step.successCondition || "", rawPrice),
         finding: `Chainlink price = $${rawPrice.toFixed(2)}`,
@@ -433,18 +438,30 @@ async function executeGenericApiStep(step: ParsedStep): Promise<StepResult> {
 
 async function executeZerionWalletStep(step: ParsedStep): Promise<StepResult> {
     const address = step.source;
-    const portfolio = await getZerionWalletPortfolio(address);
-    const totalValue = portfolio?.data?.attributes?.total?.positions || portfolio?.data?.attributes?.total?.value || 0;
+    try {
+        const portfolio = await getZerionWalletPortfolio(address);
+        const totalValue = portfolio?.data?.attributes?.total?.positions || portfolio?.data?.attributes?.total?.value || 0;
 
-    return {
-        stepId: step.id,
-        type: step.type,
-        source: `Zerion Wallet: ${address}`,
-        value: totalValue,
-        passed: evaluateSuccess(step.successCondition || "", totalValue),
-        finding: `Wallet total value = $${totalValue.toFixed(2)}`,
-        error: null,
-    };
+        return {
+            stepId: step.id,
+            type: step.type,
+            source: `Zerion Wallet: ${address}`,
+            value: totalValue,
+            passed: evaluateSuccess(step.successCondition || "", totalValue),
+            finding: `Wallet portfolio value = $${totalValue.toFixed(2)}`,
+            error: null,
+        };
+    } catch (e: any) {
+        return {
+            stepId: step.id,
+            type: step.type,
+            source: `Zerion Wallet: ${address}`,
+            value: null,
+            passed: false,
+            finding: `Zerion check failed: ${e.message}`,
+            error: e.message,
+        };
+    }
 }
 
 async function executeZerionNftStep(step: ParsedStep): Promise<StepResult> {
@@ -502,6 +519,43 @@ async function executeZerionAssetStep(step: ParsedStep): Promise<StepResult> {
         value: targetValue,
         passed: evaluateSuccess(step.successCondition || "", targetValue),
         finding,
+        error: null,
+    };
+}
+async function executeBscScanStep(step: ParsedStep): Promise<StepResult> {
+    const address = step.source;
+    try {
+        const balance = await getNativeBalance(address);
+        return {
+            stepId: step.id,
+            type: step.type,
+            source: `BSC Native: ${address}`,
+            value: balance,
+            passed: evaluateSuccess(step.successCondition || "", balance),
+            finding: `Native BNB balance = ${balance.toFixed(4)}`,
+            error: null,
+        };
+    } catch (e: any) {
+        // Fallback or bubble up
+        throw new Error(`BSC Balance check failed: ${e.message}`);
+    }
+}
+
+async function executeCryptoCompareStep(step: ParsedStep): Promise<StepResult> {
+    // If it's a generic API call for price
+    const res = await fetch(step.source);
+    const data = await res.json() as any;
+    
+    // CryptoCompare usually returns { "USD": 123 }
+    const price = data.USD || data.price || 0;
+
+    return {
+        stepId: step.id,
+        type: step.type,
+        source: step.source,
+        value: price,
+        passed: evaluateSuccess(step.successCondition || "", price),
+        finding: `External price (CC) = $${price}`,
         error: null,
     };
 }
