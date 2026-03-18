@@ -127,7 +127,8 @@ export async function fetchZerion(path: string): Promise<any> {
         throw new Error("ZERION_API_KEY not set");
     }
 
-    const res = await fetch(`https://api.zerion.io/v1/${path}`, {
+    const url = `https://api.zerion.io/v1/${path}`;
+    const res = await fetch(url, {
         headers: {
             "accept": "application/json",
             "authorization": `Basic ${Buffer.from(ZERION_API_KEY + ":").toString("base64")}`,
@@ -135,6 +136,8 @@ export async function fetchZerion(path: string): Promise<any> {
     });
 
     if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`[Zerion Error] ${res.status} ${res.statusText} URL: ${url} Body: ${errorText}`);
         throw new Error(`Zerion API error: ${res.status} ${res.statusText}`);
     }
 

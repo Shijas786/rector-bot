@@ -440,7 +440,7 @@ async function executeGenericApiStep(step: ParsedStep): Promise<StepResult> {
 // ─── Zerion Steps ─────────────────────────────────────────────────────────────
 
 async function executeZerionWalletStep(step: ParsedStep): Promise<StepResult> {
-    const address = step.source;
+    const address = step.source.trim();
     try {
         const portfolio = await getZerionWalletPortfolio(address);
         const totalValue = portfolio?.data?.attributes?.total?.positions || portfolio?.data?.attributes?.total?.value || 0;
@@ -468,7 +468,7 @@ async function executeZerionWalletStep(step: ParsedStep): Promise<StepResult> {
 }
 
 async function executeZerionNftStep(step: ParsedStep): Promise<StepResult> {
-    const address = step.source;
+    const address = step.source.trim();
     const nftPositions = await getZerionWalletNFTs(address);
     const nfts = nftPositions?.data || [];
     
@@ -500,7 +500,7 @@ async function executeZerionNftStep(step: ParsedStep): Promise<StepResult> {
 }
 
 async function executeZerionAssetStep(step: ParsedStep): Promise<StepResult> {
-    const assetId = step.source; // e.g., "ethereum-mainnet:0xC02aa..."
+    const assetId = step.source.trim(); // e.g., "ethereum-mainnet:0xC02aa..."
     const asset = await getZerionFungible(assetId);
     const attr = asset?.data?.attributes;
 
