@@ -329,7 +329,17 @@ export async function executePredictionPipeline(
         const tempId = Date.now();
         const runbook = providedRunbook || await buildRunbook(disambiguation, tempId);
         const runbookRef = await uploadRunbook(tempId, runbook);
-        const resolutionTimestamp = Math.floor(new Date(disambiguation.resolutionDate).getTime() / 1000);
+        const resDate = new Date(disambiguation.resolutionDate);
+        const now = new Date();
+        const resolutionTimestamp = Math.floor(resDate.getTime() / 1000);
+        const nowTimestamp = Math.floor(now.getTime() / 1000);
+
+        if (resolutionTimestamp <= nowTimestamp + 30) {
+            throw new Error(`Your resolution date (${resDate.toISOString()}) is too close to the current time or in the past. 
+The blockchain requires resolution dates to be in the future. 
+Since you specified a short timeframe (e.g. "2 minutes"), and there was a delay in building the plan or confirming, this prediction is no longer valid.
+Please try again with a longer timeframe (e.g. "at least 15 minutes").`);
+        }
 
         const { txHash, predictionId } = await submitPrediction(
             disambiguation.disambiguated.substring(0, 200),
