@@ -67,8 +67,24 @@ Return ONLY JSON:
         response_format: { type: "json_object" },
     });
 
-    const content = response.choices[0].message.content || "{}";
-    return JSON.parse(content) as DisambiguationResult;
+    try {
+        const content = response.choices[0].message.content || "{}";
+        return JSON.parse(content) as DisambiguationResult;
+    } catch (e: any) {
+        console.error("[Disambiguation Error] OpenAI JSON malformed:", e.message);
+        return {
+            disambiguated: rawText,
+            entities: [],
+            successCriteria: "Manual verification required",
+            verifiability: "LOW",
+            primarySource: "duckduckgo",
+            bscContract: null,
+            ambiguities: ["JSON parsing failed - check raw output"],
+            resolutionDate: resolutionDate.toISOString(),
+            feasibility: "Limited due to protocol error",
+            recommendation: "REJECT",
+        };
+    }
 }
 
 /**

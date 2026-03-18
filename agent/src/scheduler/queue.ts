@@ -129,7 +129,7 @@ export function startWorker(
 
                 // 7. Notify user via Telegram
                 if (onNotify && prediction.user.telegramId) {
-                    const accuracy = await getAccuracy(prediction.user.telegramId);
+                    const accuracy = await getAccuracy(prediction.user.shadowAddress || "0x0000000000000000000000000000000000000000");
                     const message = formatOutcome(
                         predictionId,
                         prediction.id,
