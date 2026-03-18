@@ -41,7 +41,7 @@ node -e "fetch('http://localhost:3001/message', { method: 'POST', headers: { 'Co
 ```bash
 node -e "fetch('http://localhost:3001/analyse/<SYMBOL_OR_WALLET>?telegramId=<ID>').then(r => r.json()).then(j => console.log(j.message || JSON.stringify(j))).catch(e => console.log('❌ PROTOCOL ERROR: ' + e.message))"
 ```
-*(Use ONLY when the user explicitly asks to 'analyze', 'check stats', or pastes a raw wallet/ticker without other context)*
+*(Use ONLY when the user explicitly asks to 'analyze', 'check stats', or pastes a raw wallet/ticker WITHOUT ANY OTHER TEXT. If the message contains a prediction (e.g., "hits $2k", "drops below", "will reach"), ALWAYS use the /message endpoint instead.)*
 
 ## Welcome (Onboarding)
 When a user sends /start or "hi", silenty call the API sync command with "/start" as the text and display the result verbatim.

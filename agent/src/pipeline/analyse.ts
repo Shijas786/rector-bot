@@ -203,16 +203,10 @@ export async function analyseWallet(address: string): Promise<string> {
             ? topPositions.map((p: any) => `• ${p.name} (${p.symbol}): $${p.value.toLocaleString()}`).join("\n")
             : "No significant positions found.";
 
-        const nextTarget = totalValue > 0 ? Math.ceil(totalValue * 1.5 / 100) * 100 : 1000;
-
         return `Total Portfolio Value: **$${totalValue.toLocaleString()}**
 
 **Top Assets:**
-${assetsList}
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-**DO YOU WANT TO PREDICT SOMETHING ABOUT THIS WALLET?**
-(e.g., "This wallet hits $${nextTarget.toLocaleString()} by Friday")`;
+${assetsList}`;
     } catch (error: any) {
         console.error("[Zerion Error]", error.message);
         throw new Error(`Zerion Analysis Failed: ${error.message}`);
