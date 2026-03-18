@@ -498,10 +498,7 @@ export async function sendDirectTelegram(telegramId: string, text: string, butto
 
     if (buttons.length > 0) {
         payload.reply_markup = {
-            keyboard: buttons.map(b => [{ text: b }]),
-            one_time_keyboard: false,
-            resize_keyboard: true,
-            selective: true
+            inline_keyboard: [buttons.map(b => ({ text: b, callback_data: b }))]
         };
     } else {
         payload.reply_markup = { remove_keyboard: true };
