@@ -157,9 +157,9 @@ export async function handleMessage(
 
     // 2. Handle confirmation responses
     if (state.awaitingConfirmation) {
-        const answer = text.trim().toLowerCase().replace(/[^a-z]/g, "");
-        const isYes = ["yes", "y", "confirm", "proceed", "ok", "okay", "submit", "approve", "doit", "go", "yesdoit"].includes(answer);
-        const isNo = ["no", "n", "cancel", "stop", "abort", "dont"].includes(answer);
+        const answer = text.trim().toLowerCase(); // No regex stripping here to keep emojis if needed
+        const isYes = ["yes", "y", "confirm", "proceed", "ok", "okay", "submit", "approve", "doit", "go", "yesdoit", "✅ yes, proceed"].includes(answer);
+        const isNo = ["no", "n", "cancel", "stop", "abort", "dont", "❌ cancel"].includes(answer);
 
         if (isYes) {
             const result = await handleConfirmation(user.id, telegramId, state);
@@ -167,11 +167,16 @@ export async function handleMessage(
             // If it's the preview for 'execute' (roadmap + claim), last message asks "SHALL I PROCEED...?"
             if (!result.includes("SHALL I PROCEED WITH ON-CHAIN SUBMISSION?")) {
                 await SessionManager.set(telegramId, {});
+                await sendDirectTelegram(telegramId, result, []); // Clear keyboard with new message
+            } else {
+                await sendDirectTelegram(telegramId, result, ["✅ YES, PROCEED", "❌ CANCEL"]);
             }
-            return result;
+            return ""; // Intercept and send via direct bot API for markup
         } else if (isNo) {
             await SessionManager.set(telegramId, {});
-            return "Okay, cancelled. Type /help to see what I can do.";
+            const cancelMsg = "Okay, cancelled. Type /help to see what I can do.";
+            await sendDirectTelegram(telegramId, cancelMsg, []);
+            return "";
         }
         // If it's not yes/no, fall through to natural language parsing (treat as new prediction)
     }
@@ -200,7 +205,9 @@ export async function handleMessage(
             const disambiguationText = formatDisambiguation(disambiguation);
             const runbookPreview = formatRunbookPreview(runbook);
             
-            return `${disambiguationText}\n\n${runbookPreview}`;
+            const combined = `${disambiguationText}\n\n${runbookPreview}`;
+            await sendDirectTelegram(telegramId, combined, ["✅ YES, PROCEED", "❌ CANCEL"]);
+            return "";
         }
     } catch (e: any) {
         console.error(`[handleMessage Fallback Error]`, e.message);
@@ -254,7 +261,9 @@ export async function handlePredict(telegramId: string, claim: string): Promise<
         const disambiguationText = formatDisambiguation(disambiguation);
         const runbookPreview = formatRunbookPreview(runbook);
         
-        return `${disambiguationText}\n\n${runbookPreview}`;
+        const combined = `${disambiguationText}\n\n${runbookPreview}`;
+        await sendDirectTelegram(telegramId, combined, ["✅ YES, PROCEED", "❌ CANCEL"]);
+        return "";
     } catch (error: any) {
         return `❌ Could not process prediction.`;
     }
@@ -429,6 +438,46 @@ I transform claims into verifiable on-chain truths.
 /check [id] - View on-chain proof
 
 *(Tip: You can also just type your prediction directly, like "BNB hits $700 tomorrow")*`;
+}
+
+/**
+ * Direct Telegram Bot API helper for Sending Buttons/Keyboards
+ */
+export async function sendDirectTelegram(telegramId: string, text: string, buttons: string[] = []): Promise<void> {
+    const token = process.env.OPENCLAW_TELEGRAM_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
+    if (!token) {
+        console.warn("[Telegram] No bot token found to send direct message.");
+        return;
+    }
+
+    const payload: any = {
+        chat_id: telegramId,
+        text: text,
+        parse_mode: "Markdown",
+        disable_web_page_preview: false,
+    };
+
+    if (buttons.length > 0) {
+        payload.reply_markup = {
+            keyboard: buttons.map(b => [{ text: b }]),
+            one_time_keyboard: true,
+            resize_keyboard: true
+        };
+    } else {
+        payload.reply_markup = { remove_keyboard: true };
+    }
+
+    try {
+        const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!data.ok) console.error("[Telegram Error]", data);
+    } catch (e: any) {
+        console.error("[Telegram Fetch Error]", e.message);
+    }
 }
 
 export function extractResolutionDate(text: string): Date {
