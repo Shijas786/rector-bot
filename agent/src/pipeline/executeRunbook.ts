@@ -460,10 +460,35 @@ async function executeZerionWalletStep(step: ParsedStep): Promise<StepResult> {
 
         const totalValue = portfolio?.data?.attributes?.total?.positions || portfolio?.data?.attributes?.total?.value || 0;
         
-        // Extract top 3 positions for evidence transparency
-        const top3 = (positions?.data || [])
-            .slice(0, 3)
-            .map((p: any) => `${p.attributes?.fungible_info?.symbol || "TOKEN"}: $${Math.round(p.attributes?.value || 0)}`)
+        // Extract top positions with LP Grouping & Spam Filtering
+        const rawPositions = (positions?.data || []).filter((p: any) => !p.attributes?.flags?.is_trash);
+        const groups: Record<string, any[]> = {};
+        const ungrouped: any[] = [];
+
+        for (const p of rawPositions) {
+            const attr = p.attributes;
+            if (attr?.group_id) {
+                if (!groups[attr.group_id]) groups[attr.group_id] = [];
+                groups[attr.group_id].push(p);
+            } else {
+                ungrouped.push(p);
+            }
+        }
+
+        const consolidated = [
+            ...Object.values(groups).map(g => {
+                const names = g.map(p => p.attributes?.fungible_info?.symbol || "TOKEN").join("/");
+                const totalVal = g.reduce((sum, p) => sum + (p.attributes?.value || 0), 0);
+                return { name: `${names} LP`, value: totalVal };
+            }),
+            ...ungrouped.map(p => ({
+                name: p.attributes?.fungible_info?.symbol || "TOKEN",
+                value: p.attributes?.value || 0
+            }))
+        ].filter(p => p.value > 0.01).sort((a, b) => b.value - a.value);
+
+        const top3 = consolidated.slice(0, 3)
+            .map((p: any) => `${p.name}: $${Math.round(p.value).toLocaleString()}`)
             .join(", ");
 
         const finding = top3 

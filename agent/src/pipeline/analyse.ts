@@ -8,7 +8,7 @@ import OpenAI from "openai";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const BINANCE_API = process.env.BINANCE_API_URL || "https://api.binance.com";
 
-import { getZerionWalletPortfolio, getZerionWalletPositions } from "./dataSources.js";
+import { getZerionWalletPortfolio, getZerionWalletPositions, getZerionWalletPnL } from "./dataSources.js";
 
 interface MarketData {
     symbol: string;
@@ -185,13 +185,23 @@ Want me to set an alert at $${analysis.resistance.toLocaleString()}? ✅`;
  */
 export async function analyseWallet(address: string): Promise<string> {
     try {
-        const [portfolio, positions] = await Promise.all([
+        const [portfolio, positions, pnlData] = await Promise.all([
             getZerionWalletPortfolio(address),
-            getZerionWalletPositions(address)
+            getZerionWalletPositions(address),
+            getZerionWalletPnL(address)
         ]);
 
         const totalValue = portfolio?.data?.attributes?.total?.positions || portfolio?.data?.attributes?.total?.value || 0;
         
+        // Extract PnL Summary
+        const pnl = pnlData?.data?.attributes;
+        const netInvested = pnl?.net_invested || 0;
+        const realizedPnl = pnl?.realized_pnl || 0;
+        const unrealizedPnl = pnl?.unrealized_pnl || 0;
+        const totalPnl = realizedPnl + unrealizedPnl;
+        const pnlPercent = netInvested > 0 ? (totalPnl / netInvested) * 100 : 0;
+        const pnlEmoji = totalPnl >= 0 ? "📈" : "📉";
+
         // Extract Chain Breakdown
         const chains = portfolio?.data?.attributes?.chains || {};
         const chainBreakdown = Object.entries(chains)
@@ -206,8 +216,8 @@ export async function analyseWallet(address: string): Promise<string> {
             ? chainBreakdown.map(c => `• **${c.name}**: $${c.value.toLocaleString()}`).join("\n")
             : "No chain data found.";
 
-        // Process Positions with LP Grouping
-        const rawPositions = positions?.data || [];
+        // Process Positions with LP Grouping & Spam Filtering
+        const rawPositions = (positions?.data || []).filter((p: any) => !p.attributes?.flags?.is_trash);
         const groups: Record<string, any[]> = {};
         const ungrouped: any[] = [];
 
@@ -244,15 +254,17 @@ export async function analyseWallet(address: string): Promise<string> {
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
 💎 **Total Net Worth:** **$${totalValue.toLocaleString()}**
+📊 **PnL Summary:** ${totalPnl >= 0 ? "+" : ""}$${totalPnl.toLocaleString()} (${pnlPercent.toFixed(1)}%) ${pnlEmoji}
+💵 **Net Invested:** $${netInvested.toLocaleString()}
 
-📊 **Chain Distribution:**
+🧱 **Chain Distribution:**
 ${chainList}
 
 🚀 **Top Assets & LP Pairs:**
 ${assetsList}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
-*(Real-time LP grouping & sync enabled)*`;
+*(Real-time LP grouping, PnL & Spam Filter enabled)*`;
     } catch (error: any) {
         console.error("[Zerion Error]", error.message);
         throw new Error(`Zerion Analysis Failed: ${error.message}`);

@@ -172,6 +172,13 @@ export async function getZerionFungible(assetId: string): Promise<any> {
     return await fetchZerion(`fungibles/${assetId}`);
 }
 
+/**
+ * Get wallet PnL (Net Invested, Realized/Unrealized PnL)
+ */
+export async function getZerionWalletPnL(address: string): Promise<any> {
+    return await fetchZerion(`wallets/${address}/pnl`);
+}
+
 // ─── Combined search for GPT context ─────────────────────────────────────────
 
 export interface FactCheckEvidence {
